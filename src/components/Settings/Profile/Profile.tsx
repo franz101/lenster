@@ -11,12 +11,15 @@ import { TextArea } from '@components/UI/TextArea'
 import AppContext from '@components/utils/AppContext'
 import { Profile } from '@generated/types'
 import { PencilIcon } from '@heroicons/react/outline'
+import { getFileFromBase64 } from '@lib/getFileFromBase64'
 import { uploadAssetsToIPFS } from '@lib/uploadAssetsToIPFS'
 import React, { useContext, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { ERROR_MESSAGE } from 'src/constants'
 import { useNetwork } from 'wagmi'
 import { object, string } from 'zod'
+
+import ImageCropper from './ImageCropper'
 
 const UPDATE_PROFILE_MUTATION = gql`
   mutation UpdateProfile($request: UpdateProfileRequest!) {
@@ -57,6 +60,7 @@ interface Props {
 const Profile: React.FC<Props> = ({ profile }) => {
   const [cover, setCover] = useState<string>()
   const [uploading, setUploading] = useState<boolean>(false)
+  const [showCropper, setShowCropper] = useState<boolean>(false)
   const { currentUser } = useContext(AppContext)
   const [{ data: network }] = useNetwork()
   const [updateProfile, { loading, error }] = useMutation(
@@ -82,12 +86,37 @@ const Profile: React.FC<Props> = ({ profile }) => {
     evt.preventDefault()
     setUploading(true)
     try {
+      if (evt.target.files?.length) {
+        var reader = new FileReader()
+        reader.onloadend = function () {
+          const data: any = reader.result
+          setCover(data)
+          setShowCropper(true)
+        }
+        reader.readAsDataURL(evt.target.files[0])
+      }
       // @ts-ignore
-      const attachment = await uploadAssetsToIPFS(evt.target.files[0])
-      setCover(attachment.item)
+      // const attachment = await uploadAssetsToIPFS(evt.target.files[0])
+      // setCover(attachment.item)
     } finally {
       setUploading(false)
     }
+  }
+
+  const uploadToIPFS = async () => {
+    if (cover) {
+      const file = await getFileFromBase64(cover)
+      const attachment = await uploadAssetsToIPFS(file)
+      setCover(attachment.item)
+    }
+  }
+
+  const onCropCover = () => {
+    setShowCropper(false)
+  }
+
+  const onDismissCrop = () => {
+    setShowCropper(false)
   }
 
   const form = useZodForm({
@@ -175,7 +204,7 @@ const Profile: React.FC<Props> = ({ profile }) => {
               {cover && (
                 <div>
                   <img
-                    className="object-cover w-full h-60 rounded-lg"
+                    className="object-cover w-full rounded-lg h-60"
                     style={{
                       // @ts-ignore
                       backgroundColor: `#${profile?.coverPicture?.original?.url}`
@@ -185,6 +214,12 @@ const Profile: React.FC<Props> = ({ profile }) => {
                   />
                 </div>
               )}
+              <ImageCropper
+                onCrop={() => onCropCover()}
+                onDismiss={() => onDismissCrop()}
+                showCropper={showCropper}
+                image={cover}
+              />
               <div className="flex items-center space-x-3">
                 <ChooseFile
                   onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
