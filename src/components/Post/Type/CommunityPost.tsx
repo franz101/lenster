@@ -9,16 +9,17 @@ interface Props {
 }
 
 const CommunityPost: React.FC<Props> = ({ post }) => {
+  const commentOn: any = post.commentOn
   return (
     <div className="flex items-center pb-4 space-x-1 text-sm text-gray-500">
       <UsersIcon className="w-4 h-4" />
       <div className="flex items-center space-x-1">
-        <Link href={`/posts/${post?.commentOn?.id}`}>
+        <Link href={`/posts/${commentOn?.id ?? commentOn?.pubId}`}>
           <a>Posted on</a>
         </Link>
-        <Link href={`/communities/${post?.commentOn?.id}`}>
+        <Link href={`/communities/${commentOn?.id ?? commentOn?.pubId}`}>
           <a>
-            <Slug slug={post?.commentOn?.metadata?.name} />
+            <Slug slug={commentOn?.metadata?.name} />
           </a>
         </Link>
       </div>
