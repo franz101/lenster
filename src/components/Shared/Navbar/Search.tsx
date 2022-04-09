@@ -49,6 +49,7 @@ const Search = () => {
           placeholder="Search..."
           value={searchText}
           onChange={handleSearch}
+          data-cy="search-field"
         />
       </div>
       {searchText.length > 0 && (
