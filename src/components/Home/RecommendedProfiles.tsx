@@ -86,7 +86,7 @@ const RecommendedProfiles: React.FC = () => {
   return (
     <>
       <Title />
-      <Card>
+      <Card dataCy="user-recommendations">
         <CardBody className="space-y-4">
           <ErrorMessage title="Failed to recommendations" error={error} />
           {data?.recommendedProfiles?.slice(0, 5)?.map((profile: Profile) => (

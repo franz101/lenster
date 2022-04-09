@@ -290,6 +290,7 @@ const MenuItems: React.FC<Props> = ({ indexerData }) => {
             <Login />
           </Modal>
           <Button
+            data-cy="login"
             icon={
               <img
                 className="mr-0.5 h-4"
