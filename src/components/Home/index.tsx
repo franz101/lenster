@@ -3,7 +3,6 @@ import { GridItemEight, GridItemFour, GridLayout } from '@components/GridLayout'
 import Announcement from '@components/Home/Announcement'
 import Footer from '@components/Shared/Footer'
 import AppContext from '@components/utils/AppContext'
-import SEO from '@components/utils/SEO'
 import { NextPage } from 'next'
 import React, { useContext } from 'react'
 
@@ -18,7 +17,6 @@ const Home: NextPage = () => {
 
   return (
     <>
-      <SEO />
       {!currentUser && <Hero />}
       <GridLayout>
         <GridItemEight className="space-y-5">

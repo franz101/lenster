@@ -4,7 +4,6 @@ import { Card } from '@components/UI/Card'
 import { PageLoading } from '@components/UI/PageLoading'
 import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
-import SEO from '@components/utils/SEO'
 import { Erc20 } from '@generated/types'
 import { NextPage } from 'next'
 import React, { useContext, useState } from 'react'
@@ -66,7 +65,6 @@ const AllowanceSettings: NextPage = () => {
 
   return (
     <GridLayout>
-      <SEO title="Allowance settings • Lenster" />
       <GridItemFour>
         <Sidebar />
       </GridItemFour>

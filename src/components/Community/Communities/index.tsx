@@ -1,7 +1,6 @@
 import { gql, useQuery } from '@apollo/client'
 import { GridItemSix, GridLayout } from '@components/GridLayout'
 import { PageLoading } from '@components/UI/PageLoading'
-import SEO from '@components/utils/SEO'
 import { CommunityFields } from '@gql/CommunityFields'
 import { ChartBarIcon, FireIcon } from '@heroicons/react/outline'
 import { NextPage } from 'next'
@@ -56,7 +55,6 @@ const Communities: NextPage = () => {
 
   return (
     <GridLayout>
-      <SEO title="Communities • Lenster" />
       <GridItemSix>
         <div className="flex items-center mb-2 space-x-1.5 font-bold text-gray-500">
           <FireIcon className="w-5 h-5 text-yellow-500" />

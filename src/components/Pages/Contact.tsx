@@ -6,7 +6,6 @@ import { EmptyState } from '@components/UI/EmptyState'
 import { Form, useZodForm } from '@components/UI/Form'
 import { Input } from '@components/UI/Input'
 import { TextArea } from '@components/UI/TextArea'
-import SEO from '@components/utils/SEO'
 import { PencilAltIcon } from '@heroicons/react/outline'
 import { CheckCircleIcon } from '@heroicons/react/solid'
 import { trackEvent } from '@lib/trackEvent'
@@ -36,7 +35,6 @@ const Contact: React.FC = () => {
 
   return (
     <GridLayout>
-      <SEO title="Contact • Lenster" />
       <GridItemFour>
         <SettingsHelper
           heading="Contact Lenster"
