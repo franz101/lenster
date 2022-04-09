@@ -144,7 +144,6 @@ const MenuItems: React.FC<Props> = ({ indexerData }) => {
                       Cookies.remove('accessToken')
                       Cookies.remove('refreshToken')
                       disconnect()
-                      location.href = '/'
                     }}
                     className={({ active }: { active: boolean }) =>
                       clsx(
