@@ -1,6 +1,6 @@
 context('Home Page', () => {
   beforeEach(() => {
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
   })
 
   it('should render the home page and display welcome message', () => {

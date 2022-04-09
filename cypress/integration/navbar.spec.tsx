@@ -1,6 +1,6 @@
 context('Home Page', () => {
   beforeEach(() => {
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
   })
 
   it('should render header', () => {
@@ -14,7 +14,7 @@ context('Home Page', () => {
   })
 
   it('should render logo and login button', () => {
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
     cy.get('[data-cy=navbar]')
       .find('img')
       .should('have.attr', 'src')
@@ -29,7 +29,7 @@ context('Home Page', () => {
   })
 
   it('search bar test', () => {
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
     cy.get('[data-cy=navbar]')
       .get('input')
       .invoke('attr', 'placeholder')
@@ -42,10 +42,10 @@ context('Home Page', () => {
   it('should navigate to right pages', () => {
     cy.get('[data-cy=navbar]').contains('Explore').click()
     cy.location('pathname').should('include', 'explore')
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
     cy.get('[data-cy=navbar]').contains('Explore').click()
     cy.location('pathname').should('include', 'explore')
-    cy.visit('/')
+    cy.visit('http://localhost:3000')
     cy.get('[data-cy=navbar]').contains('Communities').click()
     cy.location('pathname').should('include', 'communities')
   })
