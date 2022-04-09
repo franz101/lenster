@@ -6,6 +6,7 @@ import { Button } from '@components/UI/Button'
 import { Card, CardBody } from '@components/UI/Card'
 import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
+import SEO from '@components/utils/SEO'
 import { CreateBurnProfileBroadcastItemResult } from '@generated/types'
 import { TrashIcon } from '@heroicons/react/outline'
 import { omit } from '@lib/omit'
@@ -131,6 +132,7 @@ const DeleteSettings: React.FC = () => {
 
   return (
     <GridLayout>
+      <SEO title="Delete Profile • Lenster" />
       <GridItemFour>
         <Sidebar />
       </GridItemFour>
