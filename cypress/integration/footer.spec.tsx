@@ -1,4 +1,4 @@
-context('Home Page Footer', () => {
+context('Footer', () => {
   beforeEach(() => {
     cy.visit('http://localhost:3000')
   })
