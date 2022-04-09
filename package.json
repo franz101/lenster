@@ -8,7 +8,7 @@
     "start": "next start",
     "export": "next export",
     "cy:open": "cypress open",
-    "cy:run": "cypress run",
+    "cy:run": "cypress run --headless",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
     "prettier": "prettier --write \"./src/**/*.{ts,tsx}\"",
