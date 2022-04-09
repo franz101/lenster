@@ -35,7 +35,7 @@ context('Navbar', () => {
       .invoke('attr', 'placeholder')
       .should('contain', 'Search...')
 
-    cy.get('[data-cy=navbar]').get('input').type('sasi')
+    cy.get('[data-cy=search-field]').type('sasi')
     cy.get('[data-cy=search-results]')
   })
 
