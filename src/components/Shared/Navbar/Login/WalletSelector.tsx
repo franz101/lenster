@@ -87,8 +87,14 @@ const WalletSelector: React.FC<Props> = ({
                 request: { address: accountData?.address, signature: res.data }
               }
             }).then((res) => {
-              Cookies.set('accessToken', res.data.authenticate.accessToken)
-              Cookies.set('refreshToken', res.data.authenticate.refreshToken)
+              Cookies.set('accessToken', res.data.authenticate.accessToken, {
+                secure: true,
+                sameSite: 'None'
+              })
+              Cookies.set('refreshToken', res.data.authenticate.refreshToken, {
+                secure: true,
+                sameSite: 'None'
+              })
               getProfiles({
                 variables: { ownedBy: accountData?.address }
               }).then((res) => {

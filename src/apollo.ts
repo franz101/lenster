@@ -65,8 +65,14 @@ const authLink = new ApolloLink((operation, forward) => {
                 : ''
             }
           })
-          Cookies.set('accessToken', res?.data?.refresh?.accessToken)
-          Cookies.set('refreshToken', res?.data?.refresh?.refreshToken)
+          Cookies.set('accessToken', res?.data?.refresh?.accessToken, {
+            secure: true,
+            sameSite: 'None'
+          })
+          Cookies.set('refreshToken', res?.data?.refresh?.refreshToken, {
+            secure: true,
+            sameSite: 'None'
+          })
         })
         .catch(() => console.log(ERROR_MESSAGE))
     }
