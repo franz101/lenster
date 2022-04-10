@@ -1,13 +1,15 @@
 import LensHubProxy from '@abis/LensHubProxy.json'
-import { gql, useMutation } from '@apollo/client'
-import Slug from '@components/Shared/Slug'
+import { gql, useMutation, useQuery } from '@apollo/client'
+import ReferenceAlert from '@components/Comment/ReferenceAlert'
+import { ALLOWANCE_SETTINGS_QUERY } from '@components/Settings/Allowance'
+import AllowanceButton from '@components/Settings/Allowance/Button'
 import { Button } from '@components/UI/Button'
-import { Card, CardBody } from '@components/UI/Card'
 import { Spinner } from '@components/UI/Spinner'
 import { Tooltip } from '@components/UI/Tooltip'
 import AppContext from '@components/utils/AppContext'
-import { LensterCollectModule, LensterPost } from '@generated/lenstertypes'
+import { LensterPost } from '@generated/lenstertypes'
 import { CreateCollectBroadcastItemResult } from '@generated/types'
+import { CollectModuleFields } from '@gql/CollectModuleFields'
 import {
   CashIcon,
   ClockIcon,
@@ -16,6 +18,7 @@ import {
   UserIcon,
   UsersIcon
 } from '@heroicons/react/outline'
+import consoleLog from '@lib/consoleLog'
 import formatAddress from '@lib/formatAddress'
 import { getModule } from '@lib/getModule'
 import getTokenImage from '@lib/getTokenImage'
@@ -23,7 +26,7 @@ import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
 import dayjs from 'dayjs'
-import React, { FC, useContext } from 'react'
+import React, { FC, useContext, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CHAIN_ID,
@@ -39,6 +42,24 @@ import {
   useNetwork,
   useSignTypedData
 } from 'wagmi'
+
+export const COLLECT_QUERY = gql`
+  query CollectModule($request: PublicationQueryRequest!) {
+    publication(request: $request) {
+      ... on Post {
+        collectModule {
+          ...CollectModuleFields
+        }
+      }
+      ... on Comment {
+        collectModule {
+          ...CollectModuleFields
+        }
+      }
+    }
+  }
+  ${CollectModuleFields}
+`
 
 const CREATE_COLLECT_TYPED_DATA_MUTATION = gql`
   mutation CreateCollectTypedData($request: CreateCollectRequest!) {
@@ -76,12 +97,7 @@ interface Props {
 
 const CollectModule: FC<Props> = ({ post }) => {
   const { currentUser } = useContext(AppContext)
-  // @ts-ignore
-  const collectModule: LensterCollectModule = post?.collectModule
-  const percentageCollected =
-    (post?.stats?.totalAmountOfCollects /
-      parseInt(collectModule?.collectLimit)) *
-    100
+  const [allowed, setAllowed] = useState<boolean>(true)
 
   const [{ data: network }] = useNetwork()
   const [{ data: account }] = useAccount()
@@ -92,6 +108,44 @@ const CollectModule: FC<Props> = ({ post }) => {
       contractInterface: LensHubProxy
     },
     'collectWithSig'
+  )
+
+  const { data, loading } = useQuery(COLLECT_QUERY, {
+    variables: { request: { publicationId: post?.id } },
+    skip: !post?.id,
+    onCompleted() {
+      consoleLog(
+        'Fetch',
+        '#8b5cf6',
+        `Fetched collect module details Publication:${post?.id}`
+      )
+    }
+  })
+
+  // @ts-ignore
+  const collectModule: LensterCollectModule = data?.publication?.collectModule
+  const percentageCollected =
+    (post?.stats?.totalAmountOfCollects /
+      parseInt(collectModule?.collectLimit)) *
+    100
+
+  const { data: allowanceData, loading: allowanceLoading } = useQuery(
+    ALLOWANCE_SETTINGS_QUERY,
+    {
+      variables: {
+        request: {
+          currencies: collectModule?.amount?.asset?.address,
+          followModules: [],
+          collectModules: collectModule?.type,
+          referenceModules: []
+        }
+      },
+      skip: !collectModule?.amount?.asset?.address || !currentUser,
+      onCompleted(data) {
+        setAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance === '0x00')
+        consoleLog('Fetch', '#8b5cf6', `Fetched allowance data`)
+      }
+    }
   )
 
   const [createCollectTypedData, { loading: typedDataLoading }] = useMutation(
@@ -136,7 +190,7 @@ const CollectModule: FC<Props> = ({ post }) => {
                 ) {
                   toast.error(
                     `Please allow ${
-                      getModule(post.collectModule.type).name
+                      getModule(collectModule.type).name
                     } module in allowance settings`
                   )
                 } else {
@@ -162,7 +216,7 @@ const CollectModule: FC<Props> = ({ post }) => {
       toast.error(WRONG_NETWORK)
     } else if (
       // @ts-ignore
-      parseInt(post?.collectModule?.collectLimit) <=
+      parseInt(collectModule?.collectLimit) <=
       post?.stats?.totalAmountOfCollects
     ) {
       toast.error('Collect limit reached for this publication!')
@@ -172,6 +226,8 @@ const CollectModule: FC<Props> = ({ post }) => {
       })
     }
   }
+
+  if (loading) return <div className="h-5 m-5 rounded-lg shimmer" />
 
   return (
     <>
@@ -186,51 +242,45 @@ const CollectModule: FC<Props> = ({ post }) => {
             </div>
           </Tooltip>
         ))}
-      <div className="p-5 space-y-3">
+      <div className="p-5">
         {collectModule?.followerOnly && (
-          <Card>
-            <CardBody className="flex items-center space-x-1 text-sm font-bold text-gray-500">
-              <UsersIcon className="w-4 h-4 text-brand-500" />
-              <div>
-                <span>Only </span>
-                <Slug slug={`${post.profile.handle}'s`} prefix="@" />
-                <span> followers can collect</span>
-              </div>
-            </CardBody>
-          </Card>
-        )}
-        <div className="space-y-1.5">
-          <div className="space-y-1.5">
-            {post?.metadata?.name && (
-              <div className="text-xl font-bold">{post?.metadata?.name}</div>
-            )}
-            {post?.metadata?.description && (
-              <div className="text-gray-500 line-clamp-2">
-                {post?.metadata?.description}
-              </div>
-            )}
+          <div className="pb-5">
+            <ReferenceAlert
+              handle={post?.profile?.handle}
+              isSuperFollow={post?.profile?.followModule ? true : false}
+              action="collect"
+            />
           </div>
-          {collectModule?.amount && (
-            <div className="flex items-center py-2 space-x-1.5">
-              <span className="flex items-center space-x-1.5">
-                <Tooltip content={collectModule?.amount?.asset?.symbol}>
-                  <img
-                    className="w-7 h-7"
-                    src={getTokenImage(collectModule?.amount?.asset?.symbol)}
-                    alt={collectModule?.amount?.asset?.symbol}
-                  />
-                </Tooltip>
-                <span className="space-x-1">
-                  <span className="text-2xl font-bold">
-                    {collectModule.amount.value}
-                  </span>
-                  <span className="text-xs">
-                    {collectModule?.amount?.asset?.symbol}
-                  </span>
-                </span>
-              </span>
+        )}
+        <div className="space-y-1.5 pb-2">
+          {post?.metadata?.name && (
+            <div className="text-xl font-bold">{post?.metadata?.name}</div>
+          )}
+          {post?.metadata?.description && (
+            <div className="text-gray-500 line-clamp-2">
+              {post?.metadata?.description}
             </div>
           )}
+        </div>
+        {collectModule?.amount && (
+          <div className="flex items-center py-2 space-x-1.5">
+            <img
+              className="w-7 h-7"
+              src={getTokenImage(collectModule?.amount?.asset?.symbol)}
+              alt={collectModule?.amount?.asset?.symbol}
+              title={collectModule?.amount?.asset?.symbol}
+            />
+            <span className="space-x-1">
+              <span className="text-2xl font-bold">
+                {collectModule.amount.value}
+              </span>
+              <span className="text-xs">
+                {collectModule?.amount?.asset?.symbol}
+              </span>
+            </span>
+          </div>
+        )}
+        <div className="space-y-1.5">
           <div className="block space-y-1 sm:flex sm:space-x-5 item-center">
             <div className="flex items-center space-x-2">
               <UsersIcon className="w-4 h-4 text-gray-500" />
@@ -288,8 +338,19 @@ const CollectModule: FC<Props> = ({ post }) => {
             </div>
           )}
         </div>
-        {currentUser && (
-          <div className="pt-2">
+        {currentUser ? (
+          allowanceLoading ? (
+            <div className="w-28 mt-5 rounded-lg h-[34px] shimmer" />
+          ) : allowed ? (
+            <div className="mt-5">
+              <AllowanceButton
+                title="Allow module"
+                module={allowanceData?.approvedModuleAllowanceAmount[0]}
+                allowed={allowed}
+                setAllowed={setAllowed}
+              />
+            </div>
+          ) : (
             <Button
               onClick={createCollect}
               disabled={typedDataLoading || signLoading || writeLoading}
@@ -303,8 +364,8 @@ const CollectModule: FC<Props> = ({ post }) => {
             >
               Collect now
             </Button>
-          </div>
-        )}
+          )
+        ) : null}
       </div>
     </>
   )
