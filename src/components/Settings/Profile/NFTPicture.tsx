@@ -1,24 +1,16 @@
 import LensHubProxy from '@abis/LensHubProxy.json'
-import { useMutation } from '@apollo/client'
-import ChooseFile from '@components/Shared/ChooseFile'
-import SwitchNetwork from '@components/Shared/SwitchNetwork'
+import { useLazyQuery, useMutation } from '@apollo/client'
 import { Button } from '@components/UI/Button'
-import { Card, CardBody } from '@components/UI/Card'
-import { ErrorMessage } from '@components/UI/ErrorMessage'
-import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
 import {
   CreateSetProfileImageUriBroadcastItemResult,
   Profile
 } from '@generated/types'
-import { PencilIcon } from '@heroicons/react/outline'
-import imagekitURL from '@lib/imagekitURL'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
-import uploadAssetsToIPFS from '@lib/uploadAssetsToIPFS'
 import gql from 'graphql-tag'
-import React, { ChangeEvent, FC, useContext, useEffect, useState } from 'react'
+import React, { FC, useContext, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CHAIN_ID,
@@ -31,10 +23,9 @@ import {
   useAccount,
   useContractWrite,
   useNetwork,
+  useSignMessage,
   useSignTypedData
 } from 'wagmi'
-
-import NFTPicture from './NFTPicture'
 
 const CREATE_SET_PROFILE_IMAGE_URI_TYPED_DATA_MUTATION = gql`
   mutation CreateSetProfileImageUriTypedData(
@@ -67,17 +58,26 @@ const CREATE_SET_PROFILE_IMAGE_URI_TYPED_DATA_MUTATION = gql`
   }
 `
 
+const CHALLENGE_QUERY = gql`
+  query Challenge($request: NftOwnershipChallengeRequest!) {
+    nftOwnershipChallenge(request: $request) {
+      id
+      text
+    }
+  }
+`
+
 interface Props {
   profile: Profile
 }
 
-const Picture: FC<Props> = ({ profile }) => {
-  const [avatar, setAvatar] = useState<string>()
-  const [uploading, setUploading] = useState<boolean>(false)
+const NFTPicture: FC<Props> = ({ profile }) => {
   const { currentUser } = useContext(AppContext)
+  const [challengeId, setChallengeId] = useState<string>('')
   const [{ data: network }] = useNetwork()
   const [{ data: account }] = useAccount()
   const [{ loading: signLoading }, signTypedData] = useSignTypedData()
+  const [{}, signMessage] = useSignMessage()
   const [{ error, loading: writeLoading }, write] = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
@@ -85,13 +85,8 @@ const Picture: FC<Props> = ({ profile }) => {
     },
     'setProfileImageURIWithSig'
   )
-
-  useEffect(() => {
-    // @ts-ignore
-    if (profile?.picture?.original?.url)
-      // @ts-ignore
-      setAvatar(imagekitURL(profile?.picture?.original?.url))
-  }, [profile])
+  const [loadChallenge, { error: errorChallenege }] =
+    useLazyQuery(CHALLENGE_QUERY)
 
   const [createSetProfileImageURITypedData, { loading: typedDataLoading }] =
     useMutation(CREATE_SET_PROFILE_IMAGE_URI_TYPED_DATA_MUTATION, {
@@ -139,92 +134,51 @@ const Picture: FC<Props> = ({ profile }) => {
       }
     })
 
-  const handleUpload = async (evt: ChangeEvent<HTMLInputElement>) => {
-    evt.preventDefault()
-    setUploading(true)
-    try {
-      // @ts-ignore
-      const attachment = await uploadAssetsToIPFS(evt.target.files[0])
-      setAvatar(attachment.item)
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const editProfile = async (avatar: string | undefined) => {
-    if (!avatar) {
-      toast.error("Avatar can't be empty!")
-    } else if (!account?.address) {
+  const setAvatar = async () => {
+    if (!account?.address) {
       toast.error(CONNECT_WALLET)
     } else if (network.chain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
-      createSetProfileImageURITypedData({
+      const challengeRes = await loadChallenge({
         variables: {
           request: {
-            profileId: currentUser?.id,
-            url: avatar
+            ethereumAddress: '0x3A5bd1E37b099aE3386D13947b6a90d97675e5e3',
+            nfts: {
+              contractAddress: '0x7ed67ed4eff7d40e4c985e9ea936feb5b48f5612',
+              tokenId: '1',
+              chainId: 80001
+            }
           }
+        }
+      })
+      signMessage({
+        message: challengeRes?.data?.nftOwnershipChallenge?.text
+      }).then((res) => {
+        if (!res.error) {
+          createSetProfileImageURITypedData({
+            variables: {
+              request: {
+                profileId: currentUser?.id,
+                nftData: {
+                  id: challengeRes?.data?.nftOwnershipChallenge?.id,
+                  signature: res.data
+                }
+              }
+            }
+          })
+        } else {
+          toast.error('User denied message signature.')
         }
       })
     }
   }
 
   return (
-    <Card className="space-y-5">
-      <CardBody className="space-y-4">
-        <NFTPicture profile={profile} />
-        <ErrorMessage
-          className="mb-3"
-          title="Transaction failed!"
-          error={error}
-        />
-        <div className="space-y-1.5">
-          <label className="mb-1 font-medium text-gray-800 dark:text-gray-200">
-            Avatar
-          </label>
-          <div className="space-y-3">
-            {avatar && (
-              <div>
-                <img
-                  className="rounded-lg w-60 h-60"
-                  src={avatar}
-                  alt={avatar}
-                />
-              </div>
-            )}
-            <div className="flex items-center space-x-3">
-              <ChooseFile
-                onChange={(evt: ChangeEvent<HTMLInputElement>) =>
-                  handleUpload(evt)
-                }
-              />
-              {uploading && <Spinner size="sm" />}
-            </div>
-          </div>
-        </div>
-        {network.chain?.unsupported ? (
-          <SwitchNetwork className="ml-auto" />
-        ) : (
-          <Button
-            className="ml-auto"
-            type="submit"
-            disabled={typedDataLoading || signLoading || writeLoading}
-            onClick={() => editProfile(avatar)}
-            icon={
-              typedDataLoading || signLoading || writeLoading ? (
-                <Spinner size="xs" />
-              ) : (
-                <PencilIcon className="w-4 h-4" />
-              )
-            }
-          >
-            Save
-          </Button>
-        )}
-      </CardBody>
-    </Card>
+    <div className="space-y-1.5">
+      <Button onClick={setAvatar}>Set NFT Avatar</Button>
+    </div>
   )
 }
 
-export default Picture
+export default NFTPicture
