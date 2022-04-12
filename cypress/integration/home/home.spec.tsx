@@ -10,17 +10,8 @@ context('Home Page', () => {
     )
   })
 
-  it('should render explore list, recommended users and announcement', () => {
+  it('should render explore list, recommended users', () => {
     cy.get('[data-cy=explore-feed]')
-    cy.get('[data-cy=beta-announcement]').contains('Beta warning!')
-    cy.get('[data-cy=beta-announcement]').contains(
-      'Lenster is still in the beta phase and all contents are stored in Mumbai testnet.'
-    )
-    cy.get('[data-cy=beta-announcement]').contains('Get testnet tokens')
-    cy.get('[data-cy=beta-announcement]')
-      .find('a')
-      .should('have.attr', 'href', 'https://faucet.polygon.technology/')
-
     cy.get('div').contains('Recommended users')
     cy.get('[data-cy=user-recommendations]>div')
       .children()
