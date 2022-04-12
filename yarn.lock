@@ -2391,6 +2391,11 @@
   resolved "https://registry.yarnpkg.com/@types/trusted-types/-/trusted-types-2.0.2.tgz#fc25ad9943bcac11cceb8168db4f275e0e72e756"
   integrity sha512-F5DIZ36YVLE+PN+Zwws4kJogq47hNgX3Nx6WyDJ3kcplxyke3XIzB8uK5n/Lpm1HBsbGzd6nmGehL8cPekP+Tg==
 
+"@types/use-sync-external-store@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@types/use-sync-external-store/-/use-sync-external-store-0.0.3.tgz#b6725d5f4af24ace33b36fafd295136e75509f43"
+  integrity sha512-EwmlvuaxPNej9+T4v5AuBPJa2x2UOJVdjCtDHgcDqitUeOtjnJKJ+apYjVcAoBEMjKW1VVFGZLUb5+qqa09XFA==
+
 "@types/uuid@^8.3.4":
   version "8.3.4"
   resolved "https://registry.yarnpkg.com/@types/uuid/-/uuid-8.3.4.tgz#bd86a43617df0594787d38b735f55c805becf1bc"
@@ -2524,10 +2529,10 @@
     "@typescript-eslint/types" "5.19.0"
     eslint-visitor-keys "^3.0.0"
 
-"@wagmi/core@0.2.0-next.13":
-  version "0.2.0-next.13"
-  resolved "https://registry.yarnpkg.com/@wagmi/core/-/core-0.2.0-next.13.tgz#174b8d6c5b642ca364d80c9512928d035a694bb2"
-  integrity sha512-9a1Mi6x6kzRHKqKJgqzvK4wNHja0HD9fU48555YEFk+TwV5s4is/ADsi19RTPviwQsyDa7HhVpLmYHYpUfNiJw==
+"@wagmi/core@0.2.0-next.14":
+  version "0.2.0-next.14"
+  resolved "https://registry.yarnpkg.com/@wagmi/core/-/core-0.2.0-next.14.tgz#bbe0afbe351a83a829d00a44f95c7b24866ca4d2"
+  integrity sha512-K+TLPSkCuwafmWCpKPWXkti02PS/sIcjIY50tkOcYdQbWTV4OFEZgGry9PytjshmStB9v8HmDA61agKK5WVW2g==
   dependencies:
     eventemitter3 "^4.0.7"
     zustand "^3.7.0"
@@ -7562,14 +7567,16 @@ react-native-fetch-api@^2.0.0:
   dependencies:
     p-defer "^3.0.0"
 
-react-query@^3.34.16:
-  version "3.34.19"
-  resolved "https://registry.yarnpkg.com/react-query/-/react-query-3.34.19.tgz#0ff049b6e0d2ed148e9abfdd346625d0e88dc229"
-  integrity sha512-JO0Ymi58WKmvnhgg6bGIrYIeKb64KsKaPWo8JcGnmK2jJxAs2XmMBzlP75ZepSU7CHzcsWtIIyhMrLbX3pb/3w==
+react-query@^4.0.0-beta.2:
+  version "4.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/react-query/-/react-query-4.0.0-beta.3.tgz#7f63d55f165988ff37bc58297aabec962ccda962"
+  integrity sha512-WZkiBD+B3rVfPwR9e7W1TvshLYCfsCKx2t/jqpF/ZP3KwQnLAQ8aO67qtrP616QAK1qk3AfJMSsFtDwgYcq0AA==
   dependencies:
     "@babel/runtime" "^7.5.5"
+    "@types/use-sync-external-store" "^0.0.3"
     broadcast-channel "^3.4.1"
     match-sorter "^6.0.2"
+    use-sync-external-store "^1.0.0"
 
 react-universal-interface@^0.6.2:
   version "0.6.2"
@@ -8883,6 +8890,11 @@ use-streak@^1.0.4:
   resolved "https://registry.yarnpkg.com/use-streak/-/use-streak-1.0.4.tgz#3f08e56028ca68ce9c19355e6a12e77d90315881"
   integrity sha512-+nRmjOiWLyp4/YHJFSEh+8SxMfNCUehznrJ8/ubfn+bNuVdQHY895ITbo1zInv9veMVKXlV/Ukp76RKoGFYR7A==
 
+use-sync-external-store@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/use-sync-external-store/-/use-sync-external-store-1.0.0.tgz#d98f4a9c2e73d0f958e7e2d2c2bfb5f618cbd8fd"
+  integrity sha512-AFVsxg5GkFg8GDcxnl+Z0lMAz9rE8DGJCc28qnBuQF7lac57B5smLcT37aXpXIIPz75rW4g3eXHPjhHwdGskOw==
+
 util-deprecate@^1.0.1, util-deprecate@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/util-deprecate/-/util-deprecate-1.0.2.tgz#450d4dc9fa70de732762fbd2d4a28981419a0ccf"
@@ -8926,15 +8938,16 @@ wagmi-core@^0.1.20:
     "@ethersproject/providers" "^5.5.1"
     eventemitter3 "^4.0.7"
 
-wagmi@^0.3.0-next.15:
-  version "0.3.0-next.15"
-  resolved "https://registry.yarnpkg.com/wagmi/-/wagmi-0.3.0-next.15.tgz#b543919441bfd373af9a8ce0908df49114959014"
-  integrity sha512-6Gd8hrGS9vmnjFRyIlOgD0Y1Ecwco0suc1M9BqKnlW+iyN8D04aobPEH+6XufyrNQPdiHJmMN2BmrlSD/4daoA==
+wagmi@^0.3.0-next.16:
+  version "0.3.0-next.16"
+  resolved "https://registry.yarnpkg.com/wagmi/-/wagmi-0.3.0-next.16.tgz#a009cfa552dc17f5133b0fef29b3cd55017432d5"
+  integrity sha512-QbtJ0D912zCcMGxtMByRbo8YwRMljBt5T136xs/z25U4k8G7v9Xco+9yBDvFhwPF1Ug7Tlp94J4xB1yE5FLgOg==
   dependencies:
     "@coinbase/wallet-sdk" "^3.0.1"
-    "@wagmi/core" "0.2.0-next.13"
+    "@wagmi/core" "0.2.0-next.14"
     "@walletconnect/ethereum-provider" "1.7.5"
-    react-query "^3.34.16"
+    react-query "^4.0.0-beta.2"
+    use-sync-external-store "^1.0.0"
 
 wcwidth@^1.0.1:
   version "1.0.1"
