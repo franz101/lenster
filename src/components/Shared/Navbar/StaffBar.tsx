@@ -51,16 +51,28 @@ const StaffBar: FC = () => {
           </div>
         )}
         {GIT_COMMIT_REF && (
-          <div className="flex items-center space-x-1" title="Git commit ref">
+          <a
+            href={`https://gitlab.com/lenster/lenster/-/tree/${GIT_COMMIT_REF}`}
+            className="flex items-center space-x-1"
+            title="Git commit ref"
+            target="_blank"
+            rel="noreferrer"
+          >
             <TerminalIcon className="w-4 h-4" />
             <Badge>{GIT_COMMIT_REF}</Badge>
-          </div>
+          </a>
         )}
         {GIT_COMMIT_SHA && (
-          <div className="flex items-center space-x-1" title="Git commit SHA">
+          <a
+            href={`https://gitlab.com/lenster/lenster/-/commit/${GIT_COMMIT_SHA}`}
+            className="flex items-center space-x-1"
+            title="Git commit SHA"
+            target="_blank"
+            rel="noreferrer"
+          >
             <HashtagIcon className="w-4 h-4" />
             <Badge>{GIT_COMMIT_SHA}</Badge>
-          </div>
+          </a>
         )}
       </div>
       <Menu>
@@ -81,7 +93,7 @@ const StaffBar: FC = () => {
             >
               <Menu.Items
                 static
-                className="absolute z-10 py-1 mt-6 origin-top-right bg-white border shadow-sm right-2 rounded-xl dark:bg-gray-900 dark:border-gray-800 focus:outline-none"
+                className="absolute z-10 py-1 mt-6 origin-top-right bg-white border shadow-sm right-2 rounded-xl dark:bg-gray-900 dark:border-gray-700/80 focus:outline-none"
               >
                 <Stats />
               </Menu.Items>

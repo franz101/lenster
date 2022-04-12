@@ -101,15 +101,30 @@ const FollowModule: FC<Props> = ({
 }) => {
   const { currentUser } = useContext(AppContext)
   const [allowed, setAllowed] = useState<boolean>(true)
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const { isLoading: writeLoading, write } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'followWithSig'
+    'followWithSig',
+    {
+      onSuccess() {
+        setFollowing(true)
+        setShowFollowModal(false)
+        toast.success('Followed successfully!')
+        trackEvent('super follow user')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const { data, loading } = useQuery(SUPER_FOLLOW_QUERY, {
@@ -117,7 +132,7 @@ const FollowModule: FC<Props> = ({
     skip: !profile?.id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched super follow details Profile:${profile?.id}`
       )
@@ -140,8 +155,8 @@ const FollowModule: FC<Props> = ({
       },
       skip: !followModule?.amount?.asset?.address || !currentUser,
       onCompleted(data) {
-        setAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance === '0x00')
-        consoleLog('Fetch', '#8b5cf6', `Fetched allowance data`)
+        setAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance !== '0x00')
+        consoleLog('Query', '#8b5cf6', `Fetched allowance data`)
       }
     }
   )
@@ -154,40 +169,27 @@ const FollowModule: FC<Props> = ({
       }: {
         createFollowTypedData: CreateFollowBroadcastItemResult
       }) {
+        consoleLog('Mutation', '#4ade80', 'Generated createFollowTypedData')
         const { typedData } = createFollowTypedData
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { profileIds, datas: followData } = typedData?.value
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              follower: account?.address,
-              profileIds,
-              datas: followData,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { profileIds, datas: followData } = typedData?.value
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            follower: account?.address,
+            profileIds,
+            datas: followData,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                setFollowing(true)
-                setShowFollowModal(false)
-                toast.success('Followed successfully!')
-                trackEvent('super follow user')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -199,14 +201,14 @@ const FollowModule: FC<Props> = ({
   const createFollow = async () => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       createFollowTypedData({
         variables: {
           request: {
             follow: {
-              profile: profile.id,
+              profile: profile?.id,
               followModule: {
                 feeFollowModule: {
                   amount: {
@@ -287,15 +289,6 @@ const FollowModule: FC<Props> = ({
         allowanceLoading ? (
           <div className="w-28 mt-5 rounded-lg h-[34px] shimmer" />
         ) : allowed ? (
-          <div className="mt-5">
-            <AllowanceButton
-              title="Allow module"
-              module={allowanceData?.approvedModuleAllowanceAmount[0]}
-              allowed={allowed}
-              setAllowed={setAllowed}
-            />
-          </div>
-        ) : (
           <Button
             className="text-sm !px-3 !py-1.5 mt-5 border-pink-500 hover:bg-pink-100 focus:ring-pink-400 !text-pink-500"
             outline
@@ -312,6 +305,15 @@ const FollowModule: FC<Props> = ({
           >
             Super follow now
           </Button>
+        ) : (
+          <div className="mt-5">
+            <AllowanceButton
+              title="Allow follow module"
+              module={allowanceData?.approvedModuleAllowanceAmount[0]}
+              allowed={allowed}
+              setAllowed={setAllowed}
+            />
+          </div>
         )
       ) : null}
     </div>

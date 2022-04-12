@@ -18,8 +18,8 @@ const feeDataSchema = object({
     .min(1, { message: 'Invalid value' })
     .max(20, { message: 'Invalid value' }),
   referralFee: string()
-    .min(1, { message: 'Invalid referralFee' })
-    .max(20, { message: 'Invalid referralFee' })
+    .min(1, { message: 'Invalid Referral fee' })
+    .max(20, { message: 'Invalid Referral fee' })
 })
 
 interface Props {
@@ -67,7 +67,7 @@ const FeeEntry: FC<Props> = ({
             Select Currency
           </div>
           <select
-            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
+            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700/80 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
             onChange={(e) => setSelectedCurrency(e.target.value)}
           >
             {enabledModuleCurrencies.map((currency: Erc20) => (
@@ -83,6 +83,8 @@ const FeeEntry: FC<Props> = ({
             label="Collect Limit"
             type="number"
             placeholder="5"
+            min="0"
+            max="100000"
             {...form.register('collectLimit')}
           />
         )}
@@ -90,12 +92,16 @@ const FeeEntry: FC<Props> = ({
           label="Amount"
           type="number"
           placeholder="0.5"
+          min="0"
+          max="100000"
           {...form.register('value')}
         />
         <Input
           label="Referral Fee"
           type="number"
           placeholder="5%"
+          min="0"
+          max="100"
           {...form.register('referralFee')}
         />
         <div>
@@ -103,7 +109,7 @@ const FeeEntry: FC<Props> = ({
             Permission
           </div>
           <select
-            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
+            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700/80 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
             onChange={(e) => setFollowerOnly(e.target.value === 'true')}
           >
             <option value="false">Everyone can collect</option>

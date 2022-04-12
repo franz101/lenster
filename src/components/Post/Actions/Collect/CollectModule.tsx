@@ -1,8 +1,9 @@
 import LensHubProxy from '@abis/LensHubProxy.json'
 import { gql, useMutation, useQuery } from '@apollo/client'
-import ReferenceAlert from '@components/Comment/ReferenceAlert'
 import { ALLOWANCE_SETTINGS_QUERY } from '@components/Settings/Allowance'
 import AllowanceButton from '@components/Settings/Allowance/Button'
+import ReferenceAlert from '@components/Shared/ReferenceAlert'
+import ReferralAlert from '@components/Shared/ReferralAlert'
 import { Button } from '@components/UI/Button'
 import { Spinner } from '@components/UI/Spinner'
 import { Tooltip } from '@components/UI/Tooltip'
@@ -20,13 +21,12 @@ import {
 } from '@heroicons/react/outline'
 import consoleLog from '@lib/consoleLog'
 import formatAddress from '@lib/formatAddress'
-import { getModule } from '@lib/getModule'
 import getTokenImage from '@lib/getTokenImage'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
 import dayjs from 'dayjs'
-import React, { FC, useContext, useState } from 'react'
+import React, { Dispatch, FC, useContext, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
   CHAIN_ID,
@@ -52,6 +52,11 @@ export const COLLECT_QUERY = gql`
         }
       }
       ... on Comment {
+        collectModule {
+          ...CollectModuleFields
+        }
+      }
+      ... on Mirror {
         collectModule {
           ...CollectModuleFields
         }
@@ -93,21 +98,36 @@ const CREATE_COLLECT_TYPED_DATA_MUTATION = gql`
 
 interface Props {
   post: LensterPost
+  setShowCollectModal: Dispatch<boolean>
 }
 
-const CollectModule: FC<Props> = ({ post }) => {
+const CollectModule: FC<Props> = ({ post, setShowCollectModal }) => {
   const { currentUser } = useContext(AppContext)
   const [allowed, setAllowed] = useState<boolean>(true)
 
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const { isLoading: writeLoading, write } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'collectWithSig'
+    'collectWithSig',
+    {
+      onSuccess() {
+        setShowCollectModal(false)
+        toast.success('Post has been collected!')
+        trackEvent('collect publication')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const { data, loading } = useQuery(COLLECT_QUERY, {
@@ -115,7 +135,7 @@ const CollectModule: FC<Props> = ({ post }) => {
     skip: !post?.id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched collect module details Publication:${post?.id}`
       )
@@ -142,8 +162,8 @@ const CollectModule: FC<Props> = ({ post }) => {
       },
       skip: !collectModule?.amount?.asset?.address || !currentUser,
       onCompleted(data) {
-        setAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance === '0x00')
-        consoleLog('Fetch', '#8b5cf6', `Fetched allowance data`)
+        setAllowed(data?.approvedModuleAllowanceAmount[0]?.allowance !== '0x00')
+        consoleLog('Query', '#8b5cf6', `Fetched allowance data`)
       }
     }
   )
@@ -156,51 +176,29 @@ const CollectModule: FC<Props> = ({ post }) => {
       }: {
         createCollectTypedData: CreateCollectBroadcastItemResult
       }) {
+        consoleLog('Mutation', '#4ade80', 'Generated createCollectTypedData')
         const { typedData } = createCollectTypedData
 
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { profileId, pubId, data: collectData } = typedData?.value
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              collector: account?.address,
-              profileId,
-              pubId,
-              data: collectData,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { profileId, pubId, data: collectData } = typedData?.value
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            collector: account?.address,
+            profileId,
+            pubId,
+            data: collectData,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }: { error: any }) => {
-              if (!error) {
-                toast.success('Post has been collected!')
-                trackEvent('collect publication')
-              } else {
-                if (
-                  error?.data?.message ===
-                  'execution reverted: SafeERC20: low-level call failed'
-                ) {
-                  toast.error(
-                    `Please allow ${
-                      getModule(collectModule.type).name
-                    } module in allowance settings`
-                  )
-                } else {
-                  toast.error(error?.data?.message)
-                }
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -210,19 +208,19 @@ const CollectModule: FC<Props> = ({ post }) => {
   )
 
   const createCollect = async () => {
+    // TODO: Add time check
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else if (
-      // @ts-ignore
       parseInt(collectModule?.collectLimit) <=
       post?.stats?.totalAmountOfCollects
     ) {
       toast.error('Collect limit reached for this publication!')
     } else {
       createCollectTypedData({
-        variables: { request: { publicationId: post.id } }
+        variables: { request: { publicationId: post?.id } }
       })
     }
   }
@@ -231,17 +229,17 @@ const CollectModule: FC<Props> = ({ post }) => {
 
   return (
     <>
-      {collectModule.type === 'LimitedFeeCollectModule' ||
-        (collectModule.type === 'LimitedTimedFeeCollectModule' && (
-          <Tooltip content="Collect Limit">
-            <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700">
-              <div
-                className="h-2.5 bg-brand-500"
-                style={{ width: `${percentageCollected}%` }}
-              />
-            </div>
-          </Tooltip>
-        ))}
+      {(collectModule.type === 'LimitedFeeCollectModule' ||
+        collectModule.type === 'LimitedTimedFeeCollectModule') && (
+        <Tooltip content={`${percentageCollected.toFixed(0)}% Collected`}>
+          <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-700">
+            <div
+              className="h-2.5 bg-brand-500"
+              style={{ width: `${percentageCollected}%` }}
+            />
+          </div>
+        </Tooltip>
+      )}
       <div className="p-5">
         {collectModule?.followerOnly && (
           <div className="pb-5">
@@ -261,6 +259,10 @@ const CollectModule: FC<Props> = ({ post }) => {
               {post?.metadata?.description}
             </div>
           )}
+          <ReferralAlert
+            mirror={post}
+            referralFee={collectModule?.referralFee}
+          />
         </div>
         {collectModule?.amount && (
           <div className="flex items-center py-2 space-x-1.5">
@@ -341,17 +343,9 @@ const CollectModule: FC<Props> = ({ post }) => {
         {currentUser ? (
           allowanceLoading ? (
             <div className="w-28 mt-5 rounded-lg h-[34px] shimmer" />
-          ) : allowed ? (
-            <div className="mt-5">
-              <AllowanceButton
-                title="Allow module"
-                module={allowanceData?.approvedModuleAllowanceAmount[0]}
-                allowed={allowed}
-                setAllowed={setAllowed}
-              />
-            </div>
-          ) : (
+          ) : allowed || collectModule.type === 'FreeCollectModule' ? (
             <Button
+              className="mt-5"
               onClick={createCollect}
               disabled={typedDataLoading || signLoading || writeLoading}
               icon={
@@ -364,6 +358,15 @@ const CollectModule: FC<Props> = ({ post }) => {
             >
               Collect now
             </Button>
+          ) : (
+            <div className="mt-5">
+              <AllowanceButton
+                title="Allow collect module"
+                module={allowanceData?.approvedModuleAllowanceAmount[0]}
+                allowed={allowed}
+                setAllowed={setAllowed}
+              />
+            </div>
           )
         ) : null}
       </div>

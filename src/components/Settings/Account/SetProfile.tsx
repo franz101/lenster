@@ -9,6 +9,7 @@ import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
 import { Profile, SetDefaultProfileBroadcastItemResult } from '@generated/types'
 import { ExclamationIcon, PencilIcon } from '@heroicons/react/outline'
+import consoleLog from '@lib/consoleLog'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
@@ -63,15 +64,32 @@ const CREATE_SET_DEFAULT_PROFILE_DATA_MUTATION = gql`
 const SetProfile: FC = () => {
   const { currentUser, profiles } = useContext(AppContext)
   const [selectedUser, setSelectedUser] = useState<string>()
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ error, loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const {
+    error,
+    isLoading: writeLoading,
+    write
+  } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'setDefaultProfileWithSig'
+    'setDefaultProfileWithSig',
+    {
+      onSuccess() {
+        toast.success('Default profile updated successfully!')
+        trackEvent('set default profile')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const hasDefaultProfile = !!profiles.find((o) => o.isDefault)
@@ -90,38 +108,31 @@ const SetProfile: FC = () => {
       }: {
         createSetDefaultProfileTypedData: SetDefaultProfileBroadcastItemResult
       }) {
+        consoleLog(
+          'Mutation',
+          '#4ade80',
+          'Generated createSetDefaultProfileTypedData'
+        )
         const { typedData } = createSetDefaultProfileTypedData
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { wallet, profileId } = typedData?.value
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              follower: account?.address,
-              wallet,
-              profileId,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { wallet, profileId } = typedData?.value
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            follower: account?.address,
+            wallet,
+            profileId,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                toast.success('Default profile updated successfully!')
-                trackEvent('set default profile')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -132,7 +143,7 @@ const SetProfile: FC = () => {
   const setDefaultProfile = async () => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       createSetDefaultProfileTypedData({
@@ -148,7 +159,7 @@ const SetProfile: FC = () => {
   return (
     <Card>
       <CardBody className="space-y-5">
-        <ErrorMessage title="Transaction failed!" error={error} />
+        {error && <ErrorMessage title="Transaction failed!" error={error} />}
         {hasDefaultProfile ? (
           <>
             <div className="text-lg font-bold">Your default profile</div>
@@ -178,17 +189,17 @@ const SetProfile: FC = () => {
             Select profile
           </div>
           <select
-            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
+            className="w-full bg-white border border-gray-300 outline-none rounded-xl dark:bg-gray-800 dark:border-gray-700/80 disabled:bg-gray-500 disabled:bg-opacity-20 disabled:opacity-60 focus:border-brand-500 focus:ring-brand-400"
             onChange={(e) => setSelectedUser(e.target.value)}
           >
             {sortedProfiles?.map((profile: Profile) => (
-              <option key={profile.id} value={profile.id}>
-                @{profile.handle}
+              <option key={profile?.id} value={profile?.id}>
+                @{profile?.handle}
               </option>
             ))}
           </select>
         </div>
-        {network.chain?.unsupported ? (
+        {activeChain?.unsupported ? (
           <SwitchNetwork className="ml-auto" />
         ) : (
           <Button

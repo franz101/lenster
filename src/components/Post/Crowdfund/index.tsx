@@ -3,6 +3,7 @@ import 'linkify-plugin-mention'
 import { gql, useQuery } from '@apollo/client'
 import { GridItemSix, GridLayout } from '@components/GridLayout'
 import Collectors from '@components/Shared/Collectors'
+import ReferralAlert from '@components/Shared/ReferralAlert'
 import CrowdfundShimmer from '@components/Shared/Shimmer/CrowdfundShimmer'
 import { Card } from '@components/UI/Card'
 import { Modal } from '@components/UI/Modal'
@@ -43,7 +44,7 @@ const Crowdfund: FC<Props> = ({ fund }) => {
     skip: !fund?.id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched collect module details Crowdfund:${fund?.id}`
       )
@@ -56,11 +57,16 @@ const Crowdfund: FC<Props> = ({ fund }) => {
   const { data: revenueData, loading: revenueLoading } = useQuery(
     CROWDFUND_REVENUE_QUERY,
     {
-      variables: { request: { publicationId: fund?.id } },
+      variables: {
+        request: {
+          publicationId:
+            fund?.__typename === 'Mirror' ? fund?.mirrorOf?.id : fund?.id
+        }
+      },
       skip: !fund?.id,
       onCompleted() {
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched crowdfund revenue details Crowdfund:${fund?.id}`
         )
@@ -85,7 +91,7 @@ const Crowdfund: FC<Props> = ({ fund }) => {
   return (
     <Card>
       <div
-        className="h-40 border-b rounded-t-xl sm:h-52"
+        className="h-40 border-b dark:border-b-gray-700/80 rounded-t-xl sm:h-52"
         style={{
           backgroundImage: `url(${
             cover ? imagekitURL(cover) : `${STATIC_ASSETS}/patterns/2.svg`
@@ -101,7 +107,7 @@ const Crowdfund: FC<Props> = ({ fund }) => {
           <div className="mr-0 space-y-1 sm:mr-16">
             <div className="text-xl font-bold">{fund?.metadata?.name}</div>
             <Linkify tagName="div" options={linkifyOptions}>
-              <div className="break-words whitespace-pre-wrap">
+              <div className="break-words leading-7 whitespace-pre-wrap">
                 {fund?.metadata?.description
                   ?.replace(/\n\s*\n/g, '\n\n')
                   .trim()}
@@ -128,6 +134,10 @@ const Crowdfund: FC<Props> = ({ fund }) => {
                 </Modal>
               </>
             )}
+            <ReferralAlert
+              mirror={fund}
+              referralFee={collectModule?.referralFee}
+            />
           </div>
           <Fund
             fund={fund}

@@ -38,8 +38,8 @@ const CollectNotification: FC<Props> = ({ notification }) => {
         <Link
           href={
             postType === 'community'
-              ? `/communities/${notification?.collectedPublication.id}`
-              : `/posts/${notification?.collectedPublication.id}`
+              ? `/communities/${notification?.collectedPublication?.id}`
+              : `/posts/${notification?.collectedPublication?.id}`
           }
         >
           <a className="font-bold">{postType}</a>
@@ -56,7 +56,7 @@ const CollectNotification: FC<Props> = ({ notification }) => {
           ) : (
             <CollectionIcon className="text-pink-500 h-[15px]" />
           )}
-          <div>{dayjs(new Date(notification.createdAt)).fromNow()}</div>
+          <div>{dayjs(new Date(notification?.createdAt)).fromNow()}</div>
         </div>
       </div>
     </div>

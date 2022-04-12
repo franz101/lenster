@@ -46,7 +46,7 @@ const Followers: FC<Props> = ({ profile }) => {
       setPageInfo(data?.followers?.pageInfo)
       setFollowers(data?.followers?.items)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched first 10 followers Profile:${profile?.id}`
       )
@@ -68,7 +68,7 @@ const Followers: FC<Props> = ({ profile }) => {
         setPageInfo(data?.followers?.pageInfo)
         setFollowers([...followers, ...data?.followers?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 followers Profile:${profile?.id} Next:${pageInfo?.next}`
         )
@@ -89,7 +89,7 @@ const Followers: FC<Props> = ({ profile }) => {
       <EmptyState
         message={
           <div>
-            <span className="mr-1 font-bold">@{profile.handle}</span>
+            <span className="mr-1 font-bold">@{profile?.handle}</span>
             <span>doesn’t have any followers yet.</span>
           </div>
         }

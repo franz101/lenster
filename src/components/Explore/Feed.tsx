@@ -57,7 +57,7 @@ const Feed: FC<Props> = ({ feedType = 'TOP_COMMENTED' }) => {
       setPageInfo(data?.explorePublications?.pageInfo)
       setPublications(data?.explorePublications?.items)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched first 10 explore publications FeedType:${feedType}`
       )
@@ -80,7 +80,7 @@ const Feed: FC<Props> = ({ feedType = 'TOP_COMMENTED' }) => {
         setPageInfo(data?.explorePublications?.pageInfo)
         setPublications([...publications, ...data?.explorePublications?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 explore publications FeedType:${feedType} Next:${pageInfo?.next}`
         )
@@ -98,11 +98,11 @@ const Feed: FC<Props> = ({ feedType = 'TOP_COMMENTED' }) => {
         />
       )}
       <ErrorMessage title="Failed to load explore feed" error={error} />
-      {!error && (
+      {!error && !loading && (
         <>
           <div className="space-y-3">
             {publications?.map((post: LensterPost, index: number) => (
-              <SinglePost key={`${post.id}_${index}`} post={post} />
+              <SinglePost key={`${post?.id}_${index}`} post={post} />
             ))}
           </div>
           {pageInfo?.next && (

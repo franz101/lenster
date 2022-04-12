@@ -41,7 +41,7 @@ const Following: FC<Props> = ({ profile }) => {
       setPageInfo(data?.following?.pageInfo)
       setFollowing(data?.following?.items)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched first 10 following Profile:${profile?.id}`
       )
@@ -63,7 +63,7 @@ const Following: FC<Props> = ({ profile }) => {
         setPageInfo(data?.following?.pageInfo)
         setFollowing([...following, ...data?.following?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 following Profile:${profile?.id} Next:${pageInfo?.next}`
         )
@@ -84,7 +84,7 @@ const Following: FC<Props> = ({ profile }) => {
       <EmptyState
         message={
           <div>
-            <span className="mr-1 font-bold">@{profile.handle}</span>
+            <span className="mr-1 font-bold">@{profile?.handle}</span>
             <span>doesn’t follow anyone.</span>
           </div>
         }
@@ -103,7 +103,7 @@ const Following: FC<Props> = ({ profile }) => {
       <div className="space-y-3">
         <div className="divide-y">
           {following?.map((following: Following) => (
-            <div className="p-5" key={following?.profile.id}>
+            <div className="p-5" key={following?.profile?.id}>
               <UserProfile profile={following?.profile} showBio />
             </div>
           ))}

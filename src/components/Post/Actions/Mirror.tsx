@@ -4,7 +4,8 @@ import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
 import { LensterPost } from '@generated/lenstertypes'
 import { CreateMirrorBroadcastItemResult } from '@generated/types'
-import { DuplicateIcon } from '@heroicons/react/outline'
+import { SwitchHorizontalIcon } from '@heroicons/react/outline'
+import consoleLog from '@lib/consoleLog'
 import humanize from '@lib/humanize'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
@@ -64,15 +65,28 @@ interface Props {
 
 const Mirror: FC<Props> = ({ post }) => {
   const { currentUser } = useContext(AppContext)
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const { isLoading: writeLoading, write } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'mirrorWithSig'
+    'mirrorWithSig',
+    {
+      onSuccess() {
+        toast.success('Post has been mirrored!')
+        trackEvent('mirror')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const [createMirrorTypedData, { loading: typedDataLoading }] = useMutation(
@@ -83,6 +97,7 @@ const Mirror: FC<Props> = ({ post }) => {
       }: {
         createMirrorTypedData: CreateMirrorBroadcastItemResult
       }) {
+        consoleLog('Mutation', '#4ade80', 'Generated createMirrorTypedData')
         const { typedData } = createMirrorTypedData
         const {
           profileId,
@@ -92,38 +107,26 @@ const Mirror: FC<Props> = ({ post }) => {
           referenceModuleData
         } = typedData?.value
 
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              profileId,
-              profileIdPointed,
-              pubIdPointed,
-              referenceModule,
-              referenceModuleData,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            profileId,
+            profileIdPointed,
+            pubIdPointed,
+            referenceModule,
+            referenceModuleData,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                toast.success('Post has been mirrored!')
-                trackEvent('mirror')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -135,14 +138,14 @@ const Mirror: FC<Props> = ({ post }) => {
   const createMirror = async () => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       createMirrorTypedData({
         variables: {
           request: {
             profileId: currentUser?.id,
-            publicationId: post.id,
+            publicationId: post?.id,
             referenceModule: {
               followerOnlyReferenceModule: false
             }
@@ -163,7 +166,7 @@ const Mirror: FC<Props> = ({ post }) => {
           {typedDataLoading || signLoading || writeLoading ? (
             <Spinner size="xs" />
           ) : (
-            <DuplicateIcon className="w-[18px]" />
+            <SwitchHorizontalIcon className="w-[18px]" />
           )}
         </div>
         {post?.stats?.totalAmountOfMirrors > 0 && (
