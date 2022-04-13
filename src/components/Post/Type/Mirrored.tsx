@@ -1,6 +1,6 @@
 import Slug from '@components/Shared/Slug'
 import { Mirror } from '@generated/types'
-import { DuplicateIcon } from '@heroicons/react/outline'
+import { SwitchHorizontalIcon } from '@heroicons/react/outline'
 import Link from 'next/link'
 import React, { FC } from 'react'
 
@@ -9,18 +9,31 @@ interface Props {
 }
 
 const Mirrored: FC<Props> = ({ post }) => {
+  const postType = post?.metadata?.attributes[0]?.value
+
   return (
     <div className="flex items-center pb-4 space-x-1 text-sm text-gray-500">
-      <DuplicateIcon className="w-4 h-4" />
+      <SwitchHorizontalIcon className="w-4 h-4" />
       <div className="flex items-center space-x-1">
-        <div>Mirror of</div>
-        <Link href={`/posts/${post?.mirrorOf?.id}`}>
-          <a className="font-bold">{post.mirrorOf.__typename?.toLowerCase()}</a>
-        </Link>
-        <div>by</div>
-        <Link href={`/u/${post?.mirrorOf?.profile?.handle}`}>
+        <Link href={`/u/${post?.profile?.handle}`}>
           <a>
-            <Slug slug={post?.mirrorOf?.profile?.handle} prefix="@" />
+            {post?.profile?.name ? (
+              <b>{post?.profile?.name}</b>
+            ) : (
+              <Slug slug={post?.profile?.handle} prefix="@" />
+            )}
+          </a>
+        </Link>
+        <Link href={`/posts/${post?.mirrorOf?.id}`}>
+          <a>
+            <span>mirrored the </span>
+            <b>
+              {post?.mirrorOf.__typename === 'Post'
+                ? postType === 'crowdfund'
+                  ? 'crowdfund'
+                  : post?.mirrorOf.__typename?.toLowerCase()
+                : post?.mirrorOf.__typename?.toLowerCase()}
+            </b>
           </a>
         </Link>
       </div>

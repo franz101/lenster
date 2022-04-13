@@ -11,12 +11,12 @@ interface Props {
 }
 
 const Module: FC<Props> = ({ module }) => {
-  const [allowed, setAllowed] = useState<boolean>(module.allowance === '0x00')
+  const [allowed, setAllowed] = useState<boolean>(module.allowance !== '0x00')
 
   return (
     <Card key={module.module}>
-      <CardBody className="flex items-center justify-between">
-        <div className="overflow-hidden mr-1.5">
+      <CardBody className="block justify-between items-center sm:flex">
+        <div className="overflow-hidden mr-1.5 mb-3 sm:mb-0">
           <div className="flex items-center space-x-3">
             <div className="text-brand-500">
               <GetModuleIcon module={module.module} size={4} />

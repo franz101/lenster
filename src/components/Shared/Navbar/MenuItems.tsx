@@ -17,11 +17,10 @@ import getAvatar from '@lib/getAvatar'
 import isStaff from '@lib/isStaff'
 import trackEvent from '@lib/trackEvent'
 import clsx from 'clsx'
-import Cookies from 'js-cookie'
 import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import { FC, Fragment, useContext, useState } from 'react'
-import { useAccount, useNetwork } from 'wagmi'
+import { useDisconnect, useNetwork } from 'wagmi'
 
 import Slug from '../Slug'
 import SwitchNetwork from '../SwitchNetwork'
@@ -42,8 +41,9 @@ interface Props {
 const MenuItems: FC<Props> = ({ indexerData }) => {
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
   const { theme, setTheme } = useTheme()
-  const [{ data: network }, switchNetwork] = useNetwork()
-  const [{}, disconnect] = useAccount()
+  const { switchNetwork, activeChain } = useNetwork()
+  const { disconnect } = useDisconnect()
+
   const {
     staffMode,
     setStaffMode,
@@ -62,15 +62,15 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
     <>
       {currentUserLoading ? (
         <div className="w-8 h-8 rounded-full shimmer" />
-      ) : currentUser && !network.chain?.unsupported ? (
+      ) : currentUser && !activeChain?.unsupported ? (
         <Menu as="div">
           {({ open }) => (
             <>
               <Menu.Button
                 as="img"
                 src={getAvatar(currentUser)}
-                className="w-8 h-8 border rounded-full cursor-pointer dark:border-gray-700"
-                alt={currentUser.handle}
+                className="w-8 h-8 rounded-full border cursor-pointer dark:border-gray-700/80"
+                alt={currentUser?.handle}
               />
               <Transition
                 show={open}
@@ -84,11 +84,11 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
               >
                 <Menu.Items
                   static
-                  className="absolute right-0 w-48 py-1 mt-2 origin-top-right bg-white border shadow-sm rounded-xl dark:bg-gray-900 dark:border-gray-800 focus:outline-none"
+                  className="absolute right-0 py-1 mt-2 w-48 bg-white rounded-xl border shadow-sm origin-top-right dark:bg-gray-900 focus:outline-none dark:border-gray-700/80"
                 >
                   <Menu.Item
                     as={NextLink}
-                    href={`/u/${currentUser.handle}`}
+                    href={`/u/${currentUser?.handle}`}
                     className={({ active }: { active: boolean }) =>
                       clsx(
                         { 'bg-gray-100 dark:bg-gray-800': active },
@@ -100,15 +100,15 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                     <div className="truncate">
                       <Slug
                         className="font-bold"
-                        slug={currentUser.handle}
+                        slug={currentUser?.handle}
                         prefix="@"
                       />
                     </div>
                   </Menu.Item>
-                  <div className="border-b dark:border-gray-800" />
+                  <div className="border-b dark:border-gray-700/80" />
                   <Menu.Item
                     as={NextLink}
-                    href={`/u/${currentUser.handle}`}
+                    href={`/u/${currentUser?.handle}`}
                     className={({ active }: { active: boolean }) =>
                       clsx(
                         { 'bg-gray-100 dark:bg-gray-800': active },
@@ -141,8 +141,8 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                     onClick={() => {
                       trackEvent('logout')
                       localStorage.removeItem('selectedProfile')
-                      Cookies.remove('accessToken')
-                      Cookies.remove('refreshToken')
+                      localStorage.removeItem('accessToken')
+                      localStorage.removeItem('refreshToken')
                       disconnect()
                     }}
                     className={({ active }: { active: boolean }) =>
@@ -159,15 +159,15 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                   </Menu.Item>
                   {profiles.length > 1 && (
                     <>
-                      <div className="border-b dark:border-gray-800" />
-                      <div className="m-2 overflow-auto max-h-36 no-scrollbar">
+                      <div className="border-b dark:border-gray-700/80" />
+                      <div className="overflow-auto m-2 max-h-36 no-scrollbar">
                         <div className="flex items-center px-4 pt-1 pb-2 space-x-1.5 text-sm font-bold text-gray-500">
                           <SwitchHorizontalIcon className="w-4 h-4" />
                           <div>Switch to</div>
                         </div>
                         {profiles.map((profile: Profile, index: number) => (
                           <div
-                            key={profile.id}
+                            key={profile?.id}
                             className="block text-sm text-gray-700 rounded-lg cursor-pointer dark:text-gray-200"
                           >
                             <button
@@ -181,23 +181,23 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                                 trackEvent('switch profile')
                               }}
                             >
-                              {currentUser.id === profile.id && (
+                              {currentUser?.id === profile?.id && (
                                 <CheckCircleIcon className="w-4 h-4 text-green-500" />
                               )}
                               <img
-                                className="w-5 h-5 border rounded-full dark:border-gray-700"
+                                className="w-5 h-5 rounded-full border dark:border-gray-700/80"
                                 src={getAvatar(profile)}
-                                alt={profile.handle}
+                                alt={profile?.handle}
                               />
-                              <div className="truncate">{profile.handle}</div>
+                              <div className="truncate">{profile?.handle}</div>
                             </button>
                           </div>
                         ))}
                       </div>
                     </>
                   )}
-                  <div className="border-b dark:border-gray-800" />
-                  <div className="flex items-center px-5 py-3 space-x-4">
+                  <div className="border-b dark:border-gray-700/80" />
+                  <div className="flex items-center py-3 px-5 space-x-4">
                     <button
                       onClick={() => {
                         trackEvent('light mode')
@@ -226,9 +226,9 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                       💻
                     </button>
                   </div>
-                  {isStaff(currentUser.id) && (
+                  {isStaff(currentUser?.id) && (
                     <>
-                      <div className="border-b dark:border-gray-800" />
+                      <div className="border-b dark:border-gray-700/80" />
                       <Menu.Item
                         as="div"
                         onClick={toggleStaffMode}
@@ -255,7 +255,7 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
                   )}
                   {indexerData && (
                     <>
-                      <div className="border-b dark:border-gray-800" />
+                      <div className="border-b dark:border-gray-700/80" />
                       <div className="flex items-center py-3 px-6 space-x-2.5 text-sm">
                         <div
                           className={clsx(
@@ -277,7 +277,7 @@ const MenuItems: FC<Props> = ({ indexerData }) => {
             </>
           )}
         </Menu>
-      ) : network.chain?.unsupported && switchNetwork ? (
+      ) : activeChain?.unsupported && switchNetwork ? (
         <SwitchNetwork />
       ) : (
         <>

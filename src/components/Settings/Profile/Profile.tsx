@@ -60,7 +60,7 @@ const Profile: FC<Props> = ({ profile }) => {
   const [cover, setCover] = useState<string>()
   const [uploading, setUploading] = useState<boolean>(false)
   const { currentUser } = useContext(AppContext)
-  const [{ data: network }] = useNetwork()
+  const { activeChain } = useNetwork()
   const [updateProfile, { loading, error }] = useMutation(
     UPDATE_PROFILE_MUTATION,
     {
@@ -176,7 +176,7 @@ const Profile: FC<Props> = ({ profile }) => {
               {cover && (
                 <div>
                   <img
-                    className="object-cover w-full rounded-lg h-60"
+                    className="object-cover w-full h-60 rounded-lg"
                     src={cover}
                     alt={cover}
                   />
@@ -193,7 +193,7 @@ const Profile: FC<Props> = ({ profile }) => {
             </div>
           </div>
           <div className="ml-auto">
-            {network.chain?.unsupported ? (
+            {activeChain?.unsupported ? (
               <SwitchNetwork />
             ) : (
               <Button

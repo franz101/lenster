@@ -50,7 +50,7 @@ const Details: FC<Props> = ({ community }) => {
     onCompleted(data) {
       setJoined(data?.hasCollected[0]?.results[0]?.collected)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched has joined check Community:${community?.id} Joined:${joined}`
       )
@@ -64,7 +64,7 @@ const Details: FC<Props> = ({ community }) => {
     children: ReactChild
     icon: ReactChild
   }) => (
-    <div className="flex items-center gap-2">
+    <div className="flex gap-2 items-center">
       {icon}
       {children}
     </div>
@@ -86,13 +86,13 @@ const Details: FC<Props> = ({ community }) => {
         />
       </div>
       <div className="pt-1 text-2xl font-bold">
-        <div className="truncate">{community?.metadata.name}</div>
+        <div className="truncate">{community?.metadata?.name}</div>
       </div>
       <div className="space-y-5">
-        {community?.metadata.description && (
+        {community?.metadata?.description && (
           <div className="mr-0 leading-7 sm:mr-10 linkify">
             <Linkify tagName="div" options={linkifyOptions}>
-              {community?.metadata.description}
+              {community?.metadata?.description}
             </Linkify>
           </div>
         )}

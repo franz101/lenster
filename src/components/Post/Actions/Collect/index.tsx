@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic'
 import { FC, useState } from 'react'
 
 const CollectModule = dynamic(() => import('./CollectModule'), {
-  loading: () => <div className="h-5 m-5 rounded-lg shimmer" />
+  loading: () => <div className="m-5 h-5 rounded-lg shimmer" />
 })
 
 interface Props {
@@ -18,6 +18,8 @@ interface Props {
 
 const Collect: FC<Props> = ({ post }) => {
   const [showCollectModal, setShowCollectModal] = useState<boolean>(false)
+  const isFreeCollect =
+    post?.collectModule?.__typename === 'FreeCollectModuleSettings'
 
   return (
     <motion.button
@@ -36,17 +38,15 @@ const Collect: FC<Props> = ({ post }) => {
       </div>
       <Modal
         title={
-          post.collectModule.__typename === 'FreeCollectModuleSettings'
+          isFreeCollect
             ? 'Free Collect'
-            : getModule(post.collectModule.type).name
+            : getModule(post?.collectModule?.type).name
         }
         icon={
           <div className="text-brand-500">
             <GetModuleIcon
               module={
-                post.collectModule.__typename === 'FreeCollectModuleSettings'
-                  ? 'FreeCollectModule'
-                  : post.collectModule.type
+                isFreeCollect ? 'FreeCollectModule' : post?.collectModule?.type
               }
               size={5}
             />
@@ -55,7 +55,7 @@ const Collect: FC<Props> = ({ post }) => {
         show={showCollectModal}
         onClose={() => setShowCollectModal(!showCollectModal)}
       >
-        <CollectModule post={post} />
+        <CollectModule post={post} setShowCollectModal={setShowCollectModal} />
       </Modal>
     </motion.button>
   )

@@ -41,7 +41,7 @@ const Create: FC = () => {
   const [avatar, setAvatar] = useState<string>()
   const [isUploading, setIsUploading] = useState<boolean>(false)
   const [uploading, setUploading] = useState<boolean>(false)
-  const [{ data: network }] = useNetwork()
+  const { activeChain } = useNetwork()
   const [createProfile, { data, loading }] = useMutation(
     CREATE_PROFILE_MUTATION
   )
@@ -113,7 +113,7 @@ const Create: FC = () => {
               {avatar && (
                 <div>
                   <img
-                    className="rounded-lg w-60 h-60"
+                    className="w-60 h-60 rounded-lg"
                     src={avatar}
                     alt={avatar}
                   />
@@ -132,7 +132,7 @@ const Create: FC = () => {
             </div>
           </div>
           <div className="ml-auto">
-            {network.chain?.unsupported ? (
+            {activeChain?.unsupported ? (
               <SwitchNetwork />
             ) : (
               <Button

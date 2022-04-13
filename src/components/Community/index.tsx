@@ -14,7 +14,7 @@ import Details from './Details'
 import CommunityPageShimmer from './Shimmer'
 
 const COMMUNITY_QUERY = gql`
-  query Post($request: PublicationQueryRequest!) {
+  query Community($request: PublicationQueryRequest!) {
     publication(request: $request) {
       ... on Post {
         ...CommunityFields
@@ -33,7 +33,7 @@ const ViewCommunity: NextPage = () => {
     skip: !id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched community details Community:${id}`
       )

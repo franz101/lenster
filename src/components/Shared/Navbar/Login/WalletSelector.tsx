@@ -3,15 +3,12 @@ import { CURRENT_USER_QUERY } from '@components/SiteLayout'
 import { Button } from '@components/UI/Button'
 import { Spinner } from '@components/UI/Spinner'
 import AppContext from '@components/utils/AppContext'
-import { CheckCircleIcon } from '@heroicons/react/outline'
 import { XCircleIcon } from '@heroicons/react/solid'
+import consoleLog from '@lib/consoleLog'
 import getWalletLogo from '@lib/getWalletLogo'
 import trackEvent from '@lib/trackEvent'
 import clsx from 'clsx'
-import Cookies from 'js-cookie'
 import React, { Dispatch, FC, useContext, useEffect, useState } from 'react'
-import toast from 'react-hot-toast'
-import { COOKIE_CONFIG } from 'src/apollo'
 import { ERROR_MESSAGE } from 'src/constants'
 import { Connector, useAccount, useConnect, useSignMessage } from 'wagmi'
 
@@ -39,33 +36,42 @@ interface Props {
 
 const WalletSelector: FC<Props> = ({ setHasConnected, setHasProfile }) => {
   const [mounted, setMounted] = useState(false)
-  const [loadingSign, setLoadingSign] = useState<boolean>(false)
-  const [{}, signMessage] = useSignMessage()
-  const [loadChallenge, { error: errorChallenege }] =
-    useLazyQuery(CHALLENGE_QUERY)
-  const [authenticate, { error: errorAuthenticate }] = useMutation(
-    AUTHENTICATE_MUTATION
-  )
-  const [getProfiles, { error: errorProfiles }] =
-    useLazyQuery(CURRENT_USER_QUERY)
+  const { signMessageAsync, isLoading: signLoading } = useSignMessage()
+  const [
+    loadChallenge,
+    { error: errorChallenege, loading: challenegeLoading }
+  ] = useLazyQuery(CHALLENGE_QUERY, {
+    onCompleted(data) {
+      consoleLog(
+        'Lazy Query',
+        '#8b5cf6',
+        `Fetched auth challenege - ${data?.challenge?.text}`
+      )
+    }
+  })
+  const [authenticate, { error: errorAuthenticate, loading: authLoading }] =
+    useMutation(AUTHENTICATE_MUTATION)
+  const [getProfiles, { error: errorProfiles, loading: profilesLoading }] =
+    useLazyQuery(CURRENT_USER_QUERY, {
+      onCompleted(data) {
+        consoleLog(
+          'Lazy Query',
+          '#8b5cf6',
+          `Fetched ${data?.profiles?.items?.length} user profiles for auth`
+        )
+      }
+    })
 
   useEffect(() => setMounted(true), [])
 
-  const [
-    {
-      data: { connector, connectors },
-      loading,
-      error
-    },
-    connect
-  ] = useConnect()
-  const [{ data: accountData }] = useAccount()
+  const { connectors, error, connectAsync } = useConnect()
+  const { data: accountData } = useAccount()
   const { setSelectedProfile } = useContext(AppContext)
 
   const onConnect = async (x: Connector) => {
     trackEvent(`connect with ${x.name.toLowerCase()}`)
-    await connect(x).then(({ error }) => {
-      if (!error) {
+    await connectAsync(x).then(({ account }) => {
+      if (account) {
         setHasConnected(true)
       }
     })
@@ -73,45 +79,38 @@ const WalletSelector: FC<Props> = ({ setHasConnected, setHasProfile }) => {
 
   const handleSign = () => {
     trackEvent('sign in with ethereum')
-    setLoadingSign(true)
     loadChallenge({
       variables: { request: { address: accountData?.address } }
-    })
-      .then((res) => {
-        signMessage({ message: res.data.challenge.text }).then((res) => {
-          if (!res.error) {
-            authenticate({
-              variables: {
-                request: { address: accountData?.address, signature: res.data }
-              }
+    }).then((res) => {
+      signMessageAsync({ message: res.data.challenge.text }).then(
+        (signature) => {
+          authenticate({
+            variables: {
+              request: { address: accountData?.address, signature }
+            }
+          }).then((res) => {
+            localStorage.setItem(
+              'accessToken',
+              res.data.authenticate.accessToken
+            )
+            localStorage.setItem(
+              'refreshToken',
+              res.data.authenticate.refreshToken
+            )
+            getProfiles({
+              variables: { ownedBy: accountData?.address }
             }).then((res) => {
-              Cookies.set(
-                'accessToken',
-                res.data.authenticate.accessToken,
-                COOKIE_CONFIG
-              )
-              Cookies.set(
-                'refreshToken',
-                res.data.authenticate.refreshToken,
-                COOKIE_CONFIG
-              )
-              getProfiles({
-                variables: { ownedBy: accountData?.address }
-              }).then((res) => {
-                localStorage.setItem('selectedProfile', '0')
-                if (res.data.profiles.items.length === 0) {
-                  setHasProfile(false)
-                } else {
-                  setSelectedProfile(0)
-                }
-              })
+              localStorage.setItem('selectedProfile', '0')
+              if (res.data.profiles.items.length === 0) {
+                setHasProfile(false)
+              } else {
+                setSelectedProfile(0)
+              }
             })
-          } else {
-            toast.error('User denied message signature.')
-          }
-        })
-      })
-      .finally(() => setLoadingSign(false))
+          })
+        }
+      )
+    })
   }
 
   return (
@@ -120,12 +119,18 @@ const WalletSelector: FC<Props> = ({ setHasConnected, setHasProfile }) => {
         <div className="space-y-3">
           <Button
             size="lg"
+            disabled={
+              signLoading || challenegeLoading || authLoading || profilesLoading
+            }
             icon={
-              loadingSign ? (
+              signLoading ||
+              challenegeLoading ||
+              authLoading ||
+              profilesLoading ? (
                 <Spinner className="mr-0.5" size="xs" />
               ) : (
                 <img
-                  className="h-5 mr-1"
+                  className="mr-1 h-5"
                   src="/eth-white.svg"
                   alt="Ethereum Logo"
                 />
@@ -143,7 +148,7 @@ const WalletSelector: FC<Props> = ({ setHasConnected, setHasProfile }) => {
           )}
         </div>
       ) : (
-        <div className="inline-block w-full space-y-3 overflow-hidden text-left align-middle transition-all transform">
+        <div className="inline-block overflow-hidden space-y-3 w-full text-left align-middle transition-all transform">
           {connectors.map((x, i) => {
             return (
               <button
@@ -165,15 +170,9 @@ const WalletSelector: FC<Props> = ({ setHasConnected, setHasProfile }) => {
                   className="w-6 h-6"
                   alt={x.name}
                 />
-                <span className="flex items-center justify-between w-full">
+                <span className="flex justify-between items-center w-full">
                   {mounted ? x.name : x.id === 'injected' ? x.id : x.name}
                   {mounted ? !x.ready && ' (unsupported)' : ''}
-                  {loading && x.name === connector?.name && (
-                    <Spinner size="sm" />
-                  )}
-                  {!loading && x.id === accountData?.connector?.id && (
-                    <CheckCircleIcon className="w-5 h-5 text-brand-500" />
-                  )}
                 </span>
               </button>
             )

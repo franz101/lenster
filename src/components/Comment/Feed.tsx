@@ -14,8 +14,8 @@ import { useRouter } from 'next/router'
 import React, { FC, useContext, useState } from 'react'
 import { useInView } from 'react-cool-inview'
 
+import ReferenceAlert from '../Shared/ReferenceAlert'
 import NewComment from './NewComment'
-import ReferenceAlert from './ReferenceAlert'
 
 const COMMENT_FEED_QUERY = gql`
   query CommentFeed($request: PublicationsQueryRequest!) {
@@ -63,7 +63,7 @@ const Feed: FC<Props> = ({
         setPageInfo(data?.publications?.pageInfo)
         setPublications(data?.publications?.items)
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched first 10 comments of Publication:${id}`
         )
@@ -77,7 +77,7 @@ const Feed: FC<Props> = ({
       fetchMore({
         variables: {
           request: {
-            commentsOf: post.id,
+            commentsOf: post?.id,
             cursor: pageInfo?.next,
             limit: 10
           }
@@ -86,7 +86,7 @@ const Feed: FC<Props> = ({
         setPageInfo(data?.publications?.pageInfo)
         setPublications([...publications, ...data?.publications?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 comments of Publication:${id} Next:${pageInfo?.next}`
         )
@@ -114,11 +114,11 @@ const Feed: FC<Props> = ({
         />
       )}
       <ErrorMessage title="Failed to load comment feed" error={error} />
-      {!error && (
+      {!error && !loading && (
         <>
           <div className="space-y-3">
             {publications?.map((post: LensterPost, index: number) => (
-              <SinglePost key={`${post.id}_${index}`} post={post} hideType />
+              <SinglePost key={`${post?.id}_${index}`} post={post} hideType />
             ))}
           </div>
           {pageInfo?.next && (

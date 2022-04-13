@@ -17,6 +17,7 @@ import {
 } from '@generated/types'
 import { IGif } from '@giphy/js-types'
 import { ChatAlt2Icon, PencilAltIcon } from '@heroicons/react/outline'
+import consoleLog from '@lib/consoleLog'
 import {
   defaultFeeData,
   defaultModuleData,
@@ -47,21 +48,21 @@ import {
 import { object, string } from 'zod'
 
 const Attachment = dynamic(() => import('../../Shared/Attachment'), {
-  loading: () => <div className="w-5 h-5 mb-1 rounded-lg shimmer" />
+  loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
 })
 const Giphy = dynamic(() => import('../../Shared/Giphy'), {
-  loading: () => <div className="w-5 h-5 mb-1 rounded-lg shimmer" />
+  loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
 })
 const SelectCollectModule = dynamic(
   () => import('../../Shared/SelectCollectModule'),
   {
-    loading: () => <div className="w-5 h-5 mb-1 rounded-lg shimmer" />
+    loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
   }
 )
 const SelectReferenceModule = dynamic(
   () => import('../../Shared/SelectReferenceModule'),
   {
-    loading: () => <div className="w-5 h-5 mb-1 rounded-lg shimmer" />
+    loading: () => <div className="mb-1 w-5 h-5 rounded-lg shimmer" />
   }
 )
 
@@ -126,15 +127,36 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
   const [attachments, setAttachments] = useState<
     [{ item: string; type: string }] | []
   >([])
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ data, error, loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const {
+    data,
+    error,
+    isLoading: writeLoading,
+    write
+  } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'commentWithSig'
+    'commentWithSig',
+    {
+      onSuccess() {
+        form.reset()
+        setAttachments([])
+        setSelectedModule(defaultModuleData)
+        setFeeData(defaultFeeData)
+        trackEvent('new comment', 'create')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const [createCommentTypedData, { loading: typedDataLoading }] = useMutation(
@@ -145,6 +167,7 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
       }: {
         createCommentTypedData: CreateCommentBroadcastItemResult
       }) {
+        consoleLog('Mutation', '#4ade80', 'Generated createCommentTypedData')
         const { typedData } = createCommentTypedData
         const {
           profileId,
@@ -157,44 +180,29 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
           referenceModuleData
         } = typedData?.value
 
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              profileId,
-              profileIdPointed,
-              pubIdPointed,
-              contentURI,
-              collectModule,
-              collectModuleData,
-              referenceModule,
-              referenceModuleData,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            profileId,
+            profileIdPointed,
+            pubIdPointed,
+            contentURI,
+            collectModule,
+            collectModuleData,
+            referenceModule,
+            referenceModuleData,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                form.reset()
-                setAttachments([])
-                setSelectedModule(defaultModuleData)
-                setFeeData(defaultFeeData)
-                trackEvent('new comment', 'create')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -206,7 +214,7 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
   const createComment = async (comment: string) => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       setIsUploading(true)
@@ -233,7 +241,7 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
         variables: {
           request: {
             profileId: currentUser?.id,
-            publicationId: post.id,
+            publicationId: post?.id,
             contentURI: `https://ipfs.infura.io/ipfs/${path}`,
             collectModule: feeData.recipient
               ? {
@@ -268,16 +276,18 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
             createComment(comment)
           }}
         >
-          <ErrorMessage
-            className="mb-3"
-            title="Transaction failed!"
-            error={error}
-          />
+          {error && (
+            <ErrorMessage
+              className="mb-3"
+              title="Transaction failed!"
+              error={error}
+            />
+          )}
           <TextArea
             placeholder="Tell something cool!"
             {...form.register('comment')}
           />
-          <div className="items-center block sm:flex">
+          <div className="block items-center sm:flex">
             <div className="flex items-center space-x-4">
               <Attachment
                 attachments={attachments}
@@ -303,7 +313,7 @@ const NewComment: FC<Props> = ({ refetch, post, type }) => {
                   txHash={data?.hash}
                 />
               )}
-              {network.chain?.unsupported ? (
+              {activeChain?.unsupported ? (
                 <SwitchNetwork className="ml-auto" />
               ) : (
                 <Button

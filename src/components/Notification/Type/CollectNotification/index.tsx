@@ -24,7 +24,7 @@ const CollectNotification: FC<Props> = ({ notification }) => {
     notification?.collectedPublication?.__typename?.toLowerCase()
 
   return (
-    <div className="flex items-center gap-x-3">
+    <div className="flex gap-x-3 items-center">
       <NotificationProfileAvatar notification={notification} />
       <div className="w-4/5">
         <NotificationProfileName notification={notification} />{' '}
@@ -38,8 +38,8 @@ const CollectNotification: FC<Props> = ({ notification }) => {
         <Link
           href={
             postType === 'community'
-              ? `/communities/${notification?.collectedPublication.id}`
-              : `/posts/${notification?.collectedPublication.id}`
+              ? `/communities/${notification?.collectedPublication?.id}`
+              : `/posts/${notification?.collectedPublication?.id}`
           }
         >
           <a className="font-bold">{postType}</a>
@@ -56,7 +56,7 @@ const CollectNotification: FC<Props> = ({ notification }) => {
           ) : (
             <CollectionIcon className="text-pink-500 h-[15px]" />
           )}
-          <div>{dayjs(new Date(notification.createdAt)).fromNow()}</div>
+          <div>{dayjs(new Date(notification?.createdAt)).fromNow()}</div>
         </div>
       </div>
     </div>

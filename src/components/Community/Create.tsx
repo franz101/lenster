@@ -3,6 +3,7 @@ import { useMutation } from '@apollo/client'
 import { GridItemEight, GridItemFour, GridLayout } from '@components/GridLayout'
 import { CREATE_POST_TYPED_DATA_MUTATION } from '@components/Post/NewPost'
 import ChooseFile from '@components/Shared/ChooseFile'
+import Pending from '@components/Shared/Pending'
 import SettingsHelper from '@components/Shared/SettingsHelper'
 import SwitchNetwork from '@components/Shared/SwitchNetwork'
 import { Button } from '@components/UI/Button'
@@ -15,6 +16,7 @@ import AppContext from '@components/utils/AppContext'
 import SEO from '@components/utils/SEO'
 import { CreatePostBroadcastItemResult } from '@generated/types'
 import { PlusIcon } from '@heroicons/react/outline'
+import consoleLog from '@lib/consoleLog'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
@@ -39,8 +41,6 @@ import {
 } from 'wagmi'
 import { object, string } from 'zod'
 
-import Pending from './Pending'
-
 const newCommunitySchema = object({
   name: string()
     .min(2, { message: 'Name should be atleast 2 characters' })
@@ -56,15 +56,32 @@ const Create: FC = () => {
   const [isUploading, setIsUploading] = useState<boolean>(false)
   const [uploading, setUploading] = useState<boolean>(false)
   const { currentUser } = useContext(AppContext)
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{ data, loading: writeLoading }, write] = useContractWrite(
+  const { activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const {
+    data,
+    isLoading: writeLoading,
+    write
+  } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'postWithSig'
+    'postWithSig',
+    {
+      onSuccess() {
+        form.reset()
+        trackEvent('new community', 'create')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
 
   const form = useZodForm({
@@ -92,6 +109,7 @@ const Create: FC = () => {
       }: {
         createPostTypedData: CreatePostBroadcastItemResult
       }) {
+        consoleLog('Mutation', '#4ade80', 'Generated createPostTypedData')
         const { typedData } = createPostTypedData
         const {
           profileId,
@@ -102,39 +120,27 @@ const Create: FC = () => {
           referenceModuleData
         } = typedData?.value
 
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              profileId,
-              contentURI,
-              collectModule,
-              collectModuleData,
-              referenceModule,
-              referenceModuleData,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            profileId,
+            contentURI,
+            collectModule,
+            collectModuleData,
+            referenceModule,
+            referenceModuleData,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                form.reset()
-                trackEvent('new community', 'create')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -146,7 +152,7 @@ const Create: FC = () => {
   const createCommunity = async (name: string, description: string | null) => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       setIsUploading(true)
@@ -202,7 +208,13 @@ const Create: FC = () => {
       <GridItemEight>
         <Card>
           {data?.hash ? (
-            <Pending txHash={data?.hash} />
+            <Pending
+              txHash={data?.hash}
+              indexing="Community creation in progress, please wait!"
+              indexed="Community created successfully"
+              type="community"
+              urlPrefix="communities"
+            />
           ) : (
             <Form
               form={form}
@@ -227,7 +239,7 @@ const Create: FC = () => {
                 <div className="space-y-3">
                   {avatar && (
                     <img
-                      className="rounded-lg w-60 h-60"
+                      className="w-60 h-60 rounded-lg"
                       src={avatar}
                       alt={avatar}
                     />
@@ -243,7 +255,7 @@ const Create: FC = () => {
                 </div>
               </div>
               <div className="ml-auto">
-                {network.chain?.unsupported ? (
+                {activeChain?.unsupported ? (
                   <SwitchNetwork />
                 ) : (
                   <Button

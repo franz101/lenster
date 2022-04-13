@@ -1,30 +1,41 @@
-import React, { FC, ReactNode, useState } from 'react'
+import Tippy from '@tippyjs/react'
+import clsx from 'clsx'
+import React, { FC, ReactNode } from 'react'
+import { Placement } from 'tippy.js'
 
 interface Props {
   children: ReactNode
   content: string
+  placement?: Placement
+  className?: string
+  withDelay?: boolean
 }
 
-export const Tooltip: FC<Props> = ({ children, content }) => {
-  const [expanded, setExpanded] = useState<boolean>(false)
-
+export const Tooltip: FC<Props> = ({
+  children,
+  content,
+  placement = 'right',
+  className = '',
+  withDelay = false
+}) => {
   return (
-    <div
-      onMouseLeave={() => setExpanded(false)}
-      onMouseEnter={() => setExpanded(true)}
-      className="relative"
-    >
-      <>{children}</>
-      {expanded ? (
-        <div
-          style={{
-            transform: 'translate(-50%, -100%)'
-          }}
-          className="flex absolute -top-3 left-1/2 z-50 flex-col py-0.5 px-2 mt-2 text-xs font-bold text-gray-100 whitespace-nowrap bg-gray-900 rounded-lg border border-gray-800 truncated"
+    <Tippy
+      placement={placement}
+      duration={0}
+      delay={[withDelay ? 500 : 0, 0]}
+      className="hidden sm:block"
+      content={
+        <span
+          className={clsx(
+            'font-bold tracking-[0.2px] px-2 py-1 text-[11px] text-white bg-gray-700 border border-gray-900 rounded-lg',
+            className
+          )}
         >
           {content}
-        </div>
-      ) : null}
-    </div>
+        </span>
+      }
+    >
+      <span>{children}</span>
+    </Tippy>
   )
 }

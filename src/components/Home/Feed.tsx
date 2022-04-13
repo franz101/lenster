@@ -21,11 +21,6 @@ const HOME_FEED_QUERY = gql`
     timeline(request: $request) {
       items {
         ... on Post {
-          collectedBy {
-            defaultProfile {
-              handle
-            }
-          }
           ...PostFields
         }
         ... on Comment {
@@ -59,7 +54,7 @@ const Feed: FC = () => {
       onCompleted(data) {
         setPageInfo(data?.timeline?.pageInfo)
         setPublications(data?.timeline?.items)
-        consoleLog('Fetch', '#8b5cf6', `Fetched first 10 timeline publications`)
+        consoleLog('Query', '#8b5cf6', `Fetched first 10 timeline publications`)
       }
     }
   )
@@ -79,7 +74,7 @@ const Feed: FC = () => {
         setPageInfo(data?.timeline?.pageInfo)
         setPublications([...publications, ...data?.timeline?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 timeline publications Next:${pageInfo?.next}`
         )
@@ -98,11 +93,11 @@ const Feed: FC = () => {
         />
       )}
       <ErrorMessage title="Failed to load home feed" error={error} />
-      {!error && (
+      {!error && !loading && (
         <>
           <div className="space-y-3">
             {publications?.map((post: LensterPost, index: number) => (
-              <SinglePost key={`${post.id}_${index}`} post={post} />
+              <SinglePost key={`${post?.id}_${index}`} post={post} />
             ))}
           </div>
           {pageInfo?.next && (

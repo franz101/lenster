@@ -26,7 +26,6 @@ import Link from 'next/link'
 import { useTheme } from 'next-themes'
 import React, { FC, ReactChild, useContext, useState } from 'react'
 import { STATIC_ASSETS } from 'src/constants'
-import { useEnsLookup } from 'wagmi'
 
 import DoesFollow from './DoesFollow'
 import Followerings from './Followerings'
@@ -47,7 +46,6 @@ interface Props {
 const Details: FC<Props> = ({ profile }) => {
   const [following, setFollowing] = useState<boolean>(false)
   const { currentUser, staffMode } = useContext(AppContext)
-  const [{ data: ensName }] = useEnsLookup({ address: profile?.ownedBy })
   const { resolvedTheme } = useTheme()
   const { data: followData, loading: followLoading } = useQuery(
     DOES_FOLLOW_QUERY,
@@ -57,13 +55,13 @@ const Details: FC<Props> = ({ profile }) => {
           followInfos: [
             {
               // Am I following them
-              followerAddress: profile.ownedBy,
+              followerAddress: profile?.ownedBy,
               profileId: currentUser?.id
             },
             {
               // Do they follow me
               followerAddress: currentUser?.ownedBy,
-              profileId: profile.id
+              profileId: profile?.id
             }
           ]
         }
@@ -72,7 +70,7 @@ const Details: FC<Props> = ({ profile }) => {
       onCompleted(data) {
         setFollowing(data?.doesFollow[1]?.follows)
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched has followed check Profile:${profile?.id} Following:${following}`
         )
@@ -87,7 +85,7 @@ const Details: FC<Props> = ({ profile }) => {
     children: ReactChild
     icon: ReactChild
   }) => (
-    <div className="flex items-center gap-2">
+    <div className="flex gap-2 items-center">
       {icon}
       {children}
     </div>
@@ -95,7 +93,7 @@ const Details: FC<Props> = ({ profile }) => {
 
   return (
     <div className="px-5 mb-4 space-y-5 sm:px-0">
-      <div className="relative w-32 h-32 -mt-24 sm:-mt-32 sm:w-52 sm:h-52">
+      <div className="relative -mt-24 w-32 h-32 sm:-mt-32 sm:w-52 sm:h-52">
         <img
           src={getAvatar(profile)}
           className="w-32 h-32 bg-gray-200 rounded-xl ring-8 ring-gray-50 sm:w-52 sm:h-52 dark:bg-gray-700 dark:ring-black"
@@ -117,7 +115,7 @@ const Details: FC<Props> = ({ profile }) => {
           ) : (
             <Slug slug={formatAddress(profile?.ownedBy)} />
           )}
-          {currentUser && currentUser.id !== profile.id && (
+          {currentUser && currentUser?.id !== profile?.id && (
             <DoesFollow followData={followData?.doesFollow[0]} />
           )}
         </div>
@@ -167,7 +165,7 @@ const Details: FC<Props> = ({ profile }) => {
             </MetaDetails>
           )}
         </div>
-        {isStaff(profile.id) && (
+        {isStaff(profile?.id) && (
           <div className="py-0.5 px-2 text-sm text-white rounded-lg shadow-sm bg-brand-500 w-fit">
             Staff
           </div>
@@ -208,19 +206,6 @@ const Details: FC<Props> = ({ profile }) => {
             >
               <a href={profile?.twitterUrl} target="_blank" rel="noreferrer">
                 {profile?.twitterUrl?.replace('https://twitter.com/', '')}
-              </a>
-            </MetaDetails>
-          )}
-          {ensName && (
-            <MetaDetails
-              icon={<img src="/ens.svg" className="w-5 h-5" alt="ENS Logo" />}
-            >
-              <a
-                href={`https://app.ens.domains/name/${ensName}/details`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {ensName}
               </a>
             </MetaDetails>
           )}

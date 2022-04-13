@@ -48,14 +48,14 @@ const Feed: FC<Props> = ({ profile, type }) => {
   const [pageInfo, setPageInfo] = useState<PaginatedResultInfo>()
   const { data, loading, error, fetchMore } = useQuery(PROFILE_FEED_QUERY, {
     variables: {
-      request: { publicationTypes: type, profileId: profile.id, limit: 10 }
+      request: { publicationTypes: type, profileId: profile?.id, limit: 10 }
     },
-    skip: !profile.id,
+    skip: !profile?.id,
     onCompleted(data) {
       setPageInfo(data?.publications?.pageInfo)
       setPublications(data?.publications?.items)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched first 10 profile publications Profile:${profile?.id}`
       )
@@ -69,7 +69,7 @@ const Feed: FC<Props> = ({ profile, type }) => {
         variables: {
           request: {
             publicationTypes: type,
-            profileId: profile.id,
+            profileId: profile?.id,
             cursor: pageInfo?.next,
             limit: 10
           }
@@ -78,7 +78,7 @@ const Feed: FC<Props> = ({ profile, type }) => {
         setPageInfo(data?.publications?.pageInfo)
         setPublications([...publications, ...data?.publications?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 profile publications Profile:${profile?.id} Next:${pageInfo?.next}`
         )
@@ -93,7 +93,7 @@ const Feed: FC<Props> = ({ profile, type }) => {
         <EmptyState
           message={
             <div>
-              <span className="mr-1 font-bold">@{profile.handle}</span>
+              <span className="mr-1 font-bold">@{profile?.handle}</span>
               <span>seems like not {type.toLowerCase()}ed yet!</span>
             </div>
           }
@@ -101,11 +101,11 @@ const Feed: FC<Props> = ({ profile, type }) => {
         />
       )}
       <ErrorMessage title="Failed to load profile feed" error={error} />
-      {!error && (
+      {!error && !loading && (
         <>
           <div className="space-y-3">
             {publications?.map((post: LensterPost, index: number) => (
-              <SinglePost key={`${post.id}_${index}`} post={post} />
+              <SinglePost key={`${post?.id}_${index}`} post={post} />
             ))}
           </div>
           {pageInfo?.next && (

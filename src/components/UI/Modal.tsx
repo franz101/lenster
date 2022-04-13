@@ -24,10 +24,10 @@ export const Modal: FC<Props> = ({
     <Transition.Root show={show} as={Fragment}>
       <Dialog
         as="div"
-        className="fixed inset-0 z-10 overflow-y-auto"
+        className="overflow-y-auto fixed inset-0 z-10"
         onClose={onClose}
       >
-        <div className="flex items-center justify-center min-h-screen p-4 text-center sm:block sm:p-0">
+        <div className="flex justify-center items-center p-4 min-h-screen text-center sm:block sm:p-0">
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-100"
@@ -37,7 +37,7 @@ export const Modal: FC<Props> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <Dialog.Overlay className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" />
+            <Dialog.Overlay className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
           </Transition.Child>
           <span
             className="hidden sm:inline-block sm:h-screen sm:align-middle"
@@ -60,7 +60,7 @@ export const Modal: FC<Props> = ({
                 'inline-block align-bottom bg-white dark:bg-gray-800 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full rounded-xl'
               )}
             >
-              <div className="flex justify-between items-center py-3.5 px-5 border-b dark:border-gray-700">
+              <div className="flex justify-between items-center py-3.5 px-5 border-b dark:border-gray-700/80">
                 <div className="flex items-center space-x-2 font-bold">
                   {icon}
                   <div>{title}</div>

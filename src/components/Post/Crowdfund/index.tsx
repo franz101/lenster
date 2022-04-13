@@ -3,19 +3,24 @@ import 'linkify-plugin-mention'
 import { gql, useQuery } from '@apollo/client'
 import { GridItemSix, GridLayout } from '@components/GridLayout'
 import Collectors from '@components/Shared/Collectors'
+import ReferralAlert from '@components/Shared/ReferralAlert'
 import CrowdfundShimmer from '@components/Shared/Shimmer/CrowdfundShimmer'
 import { Card } from '@components/UI/Card'
 import { Modal } from '@components/UI/Modal'
 import { Tooltip } from '@components/UI/Tooltip'
 import { LensterCollectModule, LensterPost } from '@generated/lenstertypes'
-import { CashIcon, UsersIcon } from '@heroicons/react/outline'
+import {
+  CashIcon,
+  CurrencyDollarIcon,
+  UsersIcon
+} from '@heroicons/react/outline'
 import consoleLog from '@lib/consoleLog'
 import getTokenImage from '@lib/getTokenImage'
 import imagekitURL from '@lib/imagekitURL'
 import linkifyOptions from '@lib/linkifyOptions'
 import clsx from 'clsx'
 import Linkify from 'linkify-react'
-import React, { FC, useEffect, useState } from 'react'
+import React, { FC, ReactNode, useEffect, useState } from 'react'
 import { STATIC_ASSETS } from 'src/constants'
 
 import { COLLECT_QUERY } from '../Actions/Collect/CollectModule'
@@ -31,6 +36,18 @@ export const CROWDFUND_REVENUE_QUERY = gql`
   }
 `
 
+interface BadgeProps {
+  title: ReactNode
+  value: ReactNode
+}
+
+const Badge: FC<BadgeProps> = ({ title, value }) => (
+  <div className="flex bg-gray-200 rounded-full border border-gray-300 text-[12px] w-fit">
+    <div className="px-3 bg-gray-300 rounded-full py-[0.3px]">{title}</div>
+    <div className="pr-3 pl-2 font-bold py-[0.3px]">{value}</div>
+  </div>
+)
+
 interface Props {
   fund: LensterPost
 }
@@ -43,7 +60,7 @@ const Crowdfund: FC<Props> = ({ fund }) => {
     skip: !fund?.id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched collect module details Crowdfund:${fund?.id}`
       )
@@ -56,11 +73,16 @@ const Crowdfund: FC<Props> = ({ fund }) => {
   const { data: revenueData, loading: revenueLoading } = useQuery(
     CROWDFUND_REVENUE_QUERY,
     {
-      variables: { request: { publicationId: fund?.id } },
+      variables: {
+        request: {
+          publicationId:
+            fund?.__typename === 'Mirror' ? fund?.mirrorOf?.id : fund?.id
+        }
+      },
       skip: !fund?.id,
       onCompleted() {
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched crowdfund revenue details Crowdfund:${fund?.id}`
         )
@@ -85,7 +107,7 @@ const Crowdfund: FC<Props> = ({ fund }) => {
   return (
     <Card>
       <div
-        className="h-40 border-b rounded-t-xl sm:h-52"
+        className="h-40 border-b rounded-t-xl sm:h-52 dark:border-b-gray-700/80"
         style={{
           backgroundImage: `url(${
             cover ? imagekitURL(cover) : `${STATIC_ASSETS}/patterns/2.svg`
@@ -101,46 +123,69 @@ const Crowdfund: FC<Props> = ({ fund }) => {
           <div className="mr-0 space-y-1 sm:mr-16">
             <div className="text-xl font-bold">{fund?.metadata?.name}</div>
             <Linkify tagName="div" options={linkifyOptions}>
-              <div className="break-words whitespace-pre-wrap">
+              <div className="text-sm leading-7 break-words whitespace-pre-wrap">
                 {fund?.metadata?.description
                   ?.replace(/\n\s*\n/g, '\n\n')
                   .trim()}
               </div>
             </Linkify>
-            {fund?.stats?.totalAmountOfCollects > 0 && (
-              <>
-                <div className="flex items-center space-x-1.5 !mt-2 text-gray-500">
-                  <UsersIcon className="w-4 h-4" />
+            <div className="block sm:flex items-center !my-3 space-y-2 sm:space-y-0 sm:space-x-3">
+              {fund?.stats?.totalAmountOfCollects > 0 && (
+                <>
                   <button
                     className="text-sm"
                     onClick={() => setShowFundersModal(!showFundersModal)}
                   >
-                    {fund?.stats?.totalAmountOfCollects} funds received
+                    <Badge
+                      title={
+                        <div className="flex items-center space-x-1">
+                          <UsersIcon className="w-3 h-3" />
+                          <div>Collects</div>
+                        </div>
+                      }
+                      value={fund?.stats?.totalAmountOfCollects}
+                    />
                   </button>
-                </div>
-                <Modal
-                  title="Funders"
-                  icon={<CashIcon className="w-5 h-5 text-brand-500" />}
-                  show={showFundersModal}
-                  onClose={() => setShowFundersModal(!showFundersModal)}
-                >
-                  <Collectors pubId={fund?.id} />
-                </Modal>
-              </>
-            )}
+                  <Modal
+                    title="Funders"
+                    icon={<CashIcon className="w-5 h-5 text-brand-500" />}
+                    show={showFundersModal}
+                    onClose={() => setShowFundersModal(!showFundersModal)}
+                  >
+                    <Collectors pubId={fund?.id} />
+                  </Modal>
+                </>
+              )}
+              <Badge
+                title={
+                  <div className="flex items-center space-x-1">
+                    <CurrencyDollarIcon className="w-3 h-3" />
+                    <div>Price</div>
+                  </div>
+                }
+                value={`${collectModule?.amount?.value} ${collectModule?.amount?.asset?.symbol}`}
+              />
+            </div>
+            <ReferralAlert
+              mirror={fund}
+              referralFee={collectModule?.referralFee}
+            />
           </div>
-          <Fund
-            fund={fund}
-            collectModule={collectModule}
-            revenue={revenue}
-            setRevenue={setRevenue}
-          />
+          <div className="pt-3 sm:pt-0">
+            <Fund
+              fund={fund}
+              collectModule={collectModule}
+              revenue={revenue}
+              setRevenue={setRevenue}
+            />
+          </div>
         </div>
         {revenueLoading ? (
           <div className="w-full h-[13px] !mt-5 rounded-full shimmer" />
         ) : (
           goalAmount && (
             <Tooltip
+              placement="top"
               content={
                 percentageReached >= 100
                   ? 'Goal reached 🎉'

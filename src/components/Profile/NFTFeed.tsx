@@ -47,12 +47,12 @@ const NFTFeed: FC<Props> = ({ profile }) => {
         limit: 10
       }
     },
-    skip: !profile.ownedBy,
+    skip: !profile?.ownedBy,
     onCompleted(data) {
       setPageInfo(data?.nfts?.pageInfo)
       setNfts(data?.nfts?.items)
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched first 10 nfts Profile:${profile?.id}`
       )
@@ -75,7 +75,7 @@ const NFTFeed: FC<Props> = ({ profile }) => {
         setPageInfo(data?.nfts?.pageInfo)
         setNfts([...nfts, ...data?.nfts?.items])
         consoleLog(
-          'Fetch',
+          'Query',
           '#8b5cf6',
           `Fetched next 10 nfts Profile:${profile?.id} Next:${pageInfo?.next}`
         )
@@ -90,7 +90,7 @@ const NFTFeed: FC<Props> = ({ profile }) => {
         <EmptyState
           message={
             <div>
-              <span className="mr-1 font-bold">@{profile.handle}</span>
+              <span className="mr-1 font-bold">@{profile?.handle}</span>
               <span>seems like have no nfts!</span>
             </div>
           }

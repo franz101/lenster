@@ -81,7 +81,7 @@ const ViewPost: NextPage = () => {
     skip: !id,
     onCompleted() {
       consoleLog(
-        'Fetch',
+        'Query',
         '#8b5cf6',
         `Fetched publication details Publication:${id}`
       )
@@ -104,7 +104,7 @@ const ViewPost: NextPage = () => {
         <Feed
           post={post}
           onlyFollowers={
-            post.referenceModule?.__typename ===
+            post?.referenceModule?.__typename ===
             'FollowOnlyReferenceModuleSettings'
           }
           isFollowing={data?.doesFollow[0]?.follows}
@@ -113,11 +113,18 @@ const ViewPost: NextPage = () => {
       <GridItemFour className="space-y-5">
         <Card>
           <CardBody>
-            <UserProfile profile={post.profile} showBio />
+            <UserProfile
+              profile={
+                post?.__typename === 'Mirror'
+                  ? post?.mirrorOf?.profile
+                  : post?.profile
+              }
+              showBio
+            />
           </CardBody>
           {post?.appId === 'Lenster' && <ViaLenster />}
         </Card>
-        <IPFSHash ipfsHash={post.onChainContentURI} />
+        <IPFSHash ipfsHash={post?.onChainContentURI} />
         <Footer />
       </GridItemFour>
     </GridLayout>
