@@ -74,16 +74,33 @@ interface Props {
 const NFTPicture: FC<Props> = ({ profile }) => {
   const { currentUser } = useContext(AppContext)
   const [challengeId, setChallengeId] = useState<string>('')
-  const [{ data: network }] = useNetwork()
-  const [{ data: account }] = useAccount()
-  const [{ loading: signLoading }, signTypedData] = useSignTypedData()
-  const [{}, signMessage] = useSignMessage()
-  const [{ error, loading: writeLoading }, write] = useContractWrite(
+  const { data: network, activeChain } = useNetwork()
+  const { data: account } = useAccount()
+  const { isLoading: signLoading, signTypedDataAsync } = useSignTypedData({
+    onError(error) {
+      toast.error(error?.message)
+    }
+  })
+  const { signMessageAsync } = useSignMessage()
+  const {
+    error,
+    isLoading: writeLoading,
+    write
+  } = useContractWrite(
     {
       addressOrName: LENSHUB_PROXY,
       contractInterface: LensHubProxy
     },
-    'setProfileImageURIWithSig'
+    'setProfileImageURIWithSig',
+    {
+      onSuccess() {
+        toast.success('Avatar updated successfully!')
+        trackEvent('update avatar')
+      },
+      onError(error) {
+        toast.error(error?.message)
+      }
+    }
   )
   const [loadChallenge, { error: errorChallenege }] =
     useLazyQuery(CHALLENGE_QUERY)
@@ -97,36 +114,24 @@ const NFTPicture: FC<Props> = ({ profile }) => {
       }) {
         const { typedData } = createSetProfileImageURITypedData
 
-        signTypedData({
+        signTypedDataAsync({
           domain: omit(typedData?.domain, '__typename'),
           types: omit(typedData?.types, '__typename'),
           value: omit(typedData?.value, '__typename')
-        }).then((res) => {
-          if (!res.error) {
-            const { profileId, imageURI } = typedData?.value
-            const { v, r, s } = splitSignature(res.data)
-            const inputStruct = {
-              profileId,
-              imageURI,
-              sig: {
-                v,
-                r,
-                s,
-                deadline: typedData.value.deadline
-              }
+        }).then((signature) => {
+          const { profileId, imageURI } = typedData?.value
+          const { v, r, s } = splitSignature(signature)
+          const inputStruct = {
+            profileId,
+            imageURI,
+            sig: {
+              v,
+              r,
+              s,
+              deadline: typedData.value.deadline
             }
-
-            write({ args: inputStruct }).then(({ error }) => {
-              if (!error) {
-                toast.success('Avatar updated successfully!')
-                trackEvent('update avatar')
-              } else {
-                toast.error(error?.message)
-              }
-            })
-          } else {
-            toast.error(res.error?.message)
           }
+          write({ args: inputStruct })
         })
       },
       onError(error) {
@@ -137,7 +142,7 @@ const NFTPicture: FC<Props> = ({ profile }) => {
   const setAvatar = async () => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
-    } else if (network.chain?.id !== CHAIN_ID) {
+    } else if (activeChain?.id !== CHAIN_ID) {
       toast.error(WRONG_NETWORK)
     } else {
       const challengeRes = await loadChallenge({
@@ -152,24 +157,20 @@ const NFTPicture: FC<Props> = ({ profile }) => {
           }
         }
       })
-      signMessage({
+      signMessageAsync({
         message: challengeRes?.data?.nftOwnershipChallenge?.text
-      }).then((res) => {
-        if (!res.error) {
-          createSetProfileImageURITypedData({
-            variables: {
-              request: {
-                profileId: currentUser?.id,
-                nftData: {
-                  id: challengeRes?.data?.nftOwnershipChallenge?.id,
-                  signature: res.data
-                }
+      }).then((signature) => {
+        createSetProfileImageURITypedData({
+          variables: {
+            request: {
+              profileId: currentUser?.id,
+              nftData: {
+                id: challengeRes?.data?.nftOwnershipChallenge?.id,
+                signature
               }
             }
-          })
-        } else {
-          toast.error('User denied message signature.')
-        }
+          }
+        })
       })
     }
   }
