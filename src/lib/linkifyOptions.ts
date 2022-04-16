@@ -9,7 +9,7 @@ const linkifyOptions = {
     }
     return value
   },
-  formatHref: (href: string, type: string): string  => {
+  formatHref: (href: string, type: string): string => {
     if (type === 'url') {
       return href
     }
