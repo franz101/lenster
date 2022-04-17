@@ -1,5 +1,5 @@
 import LensHubProxy from '@abis/LensHubProxy.json'
-import { useMutation } from '@apollo/client'
+import { gql, useMutation } from '@apollo/client'
 import ChooseFile from '@components/Shared/ChooseFile'
 import IndexStatus from '@components/Shared/IndexStatus'
 import SwitchNetwork from '@components/Shared/SwitchNetwork'
@@ -19,7 +19,6 @@ import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
 import uploadAssetsToIPFS from '@lib/uploadAssetsToIPFS'
-import gql from 'graphql-tag'
 import React, { ChangeEvent, FC, useContext, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
@@ -198,7 +197,7 @@ const Picture: FC<Props> = ({ profile }) => {
             {avatar && (
               <div>
                 <img
-                  className="w-60 h-60 rounded-lg"
+                  className="rounded-lg w-60 h-60"
                   src={imagekitURL(avatar, 'avatar')}
                   alt={avatar}
                 />
