@@ -3,112 +3,55 @@ name: CI
 on: push
 
 jobs:
-  prettier:
-    name: Prettier Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14
-      - name: Cache pnpm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.32.8
-          run_install: true
-      - name: Prettier
-        run: pnpm prettier:check
-
-  eslint:
-    name: ESLint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14
-      - name: Cache pnpm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.32.8
-          run_install: true
-      - name: ESLint
-        run: pnpm lint
-
-  typecheck:
-    name: TypeCheck
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14
-      - name: Cache pnpm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: pnpm/action-setup@v2.0.1
-        with:
-          version: 6.32.8
-          run_install: true
-      - name: GraphQL codegen
-        run: pnpm codegen
-      - name: TypeScript
-        run: pnpm typecheck
-
   build:
-    name: Build
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-      - name: Checkout Repo
-        uses: actions/checkout@v2
-      - name: Use Node.js
-        uses: actions/setup-node@v1
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
         with:
-          node-version: 14
-      - name: Cache pnpm modules
-        uses: actions/cache@v2
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-
-      - uses: pnpm/action-setup@v2.0.1
+          node-version: ${{ matrix.node-version }}
+
+      - name: pnpm setup
+        uses: pnpm/action-setup@v2.0.1
         with:
           version: 6.32.8
           run_install: true
-      - name: Create local environment
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Get pnpm cache directory path
+        id: pnpm-cache-dir
+        run: echo "::set-output name=dir::$(pnpm cache dir)"
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v2
+        id: pnpm-cache
+        with:
+          path: ${{ steps.pnpm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Setup environment variables
         run: cp .env.example .env
+
       - name: GraphQL Codegen
         run: pnpm codegen
-      - name: Next.js build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Prettier Check
+        run: pnpm prettier:check
+
+      - name: Typescript typecheck
+        run: pnpm typecheck
+
+      - name: Build Lenster
         run: pnpm build
