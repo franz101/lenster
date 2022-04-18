@@ -8,7 +8,7 @@ import consoleLog from '@lib/consoleLog'
 import omit from '@lib/omit'
 import splitSignature from '@lib/splitSignature'
 import trackEvent from '@lib/trackEvent'
-import { Dispatch, FC } from 'react'
+import { Dispatch, FC, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import {
   CHAIN_ID,
@@ -122,7 +122,7 @@ const Follow: FC<Props> = ({ profile, showText = false, setFollowing }) => {
     }
   )
 
-  const createFollow = () => {
+  const createFollow = useCallback(() => {
     if (!account?.address) {
       toast.error(CONNECT_WALLET)
     } else if (activeChain?.id !== CHAIN_ID) {
@@ -134,7 +134,7 @@ const Follow: FC<Props> = ({ profile, showText = false, setFollowing }) => {
         }
       })
     }
-  }
+  }, [account, profile, activeChain, createFollowTypedData])
 
   return (
     <Button
