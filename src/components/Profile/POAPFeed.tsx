@@ -1,4 +1,5 @@
 import { ApolloClient, InMemoryCache } from '@apollo/client'
+import NFTSShimmer from '@components/Shared/Shimmer/NFTSShimmer'
 import { EmptyState } from '@components/UI/EmptyState'
 import { Profile } from '@generated/types'
 import { CollectionIcon } from '@heroicons/react/outline'
@@ -16,15 +17,22 @@ const client = new ApolloClient({
 })
 
 const POAPFeed: FC<Props> = ({ profile }) => {
+  const [loading, setLoading] = useState<boolean>(true)
   const [poaps, setPoaps] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
-      const url = `https://frontend.poap.tech/actions/scan/node-fetch`
-      const data = await (await fetch(url)).json()
-      console.log('data', data)
+      setLoading(true)
+      try {
+        const url = `https://frontend.poap.tech/actions/scan/${profile.ownedBy}`
+        const data = await (await fetch(url)).json()
+        setPoaps(data)
+        console.log('data', data)
+      } catch (error) {
+        console.log(error)
+      }
 
-      setPoaps(data)
+      setLoading(false)
     }
 
     fetchData()
@@ -32,8 +40,8 @@ const POAPFeed: FC<Props> = ({ profile }) => {
 
   return (
     <>
-      {/* {loading && <NFTSShimmer />} */}
-      {(poaps as any)?.items?.length === 0 && (
+      {loading && <NFTSShimmer />}
+      {!loading && (poaps as any)?.length === 0 && (
         <EmptyState
           message={
             <div>
@@ -44,7 +52,7 @@ const POAPFeed: FC<Props> = ({ profile }) => {
           icon={<CollectionIcon className="w-8 h-8 text-brand" />}
         />
       )}
-      {poaps?.map((item: any) => {
+      {(poaps || []).map((item: any) => {
         return (
           <span
             style={
@@ -66,32 +74,16 @@ const POAPFeed: FC<Props> = ({ profile }) => {
             }
             key={item.event.name}
           >
-            <a>{item.event.name}</a>
-            {/* <p style={{ fontSize: '12px' }}>{item.id}</p> */}
+            <a
+              href={`https://app.poap.xyz/token/${item.tokenId}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {item.event.name}
+            </a>
           </span>
         )
       })}
-
-      {/*
-      <ErrorMessage title="Failed to load nft feed" error={error} />
-       {!error && (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {JSON.stringify(poaps)}
-            {/* {poaps?.map((nft: Nft) => (
-              <SingleNFT
-                key={`${nft?.chainId}_${nft?.contractAddress}_${nft?.tokenId}`}
-                nft={nft}
-              />
-            ))} 
-          </div>
-           pageInfo?.next && (
-            <span ref={observe} className="flex justify-center p-5">
-              <Spinner size="sm" />
-            </span>
-          )
-        </>
-      )} */}
     </>
   )
 }
