@@ -3,13 +3,10 @@ import PostsShimmer from '@components/Shared/Shimmer/PostsShimmer'
 import { Card, CardBody } from '@components/UI/Card'
 import React, { FC, useEffect, useState } from 'react'
 
-
 const APIURL = 'https://api.thegraph.com/subgraphs/name/franz101/lens-protocol'
-const EXPLORE_POSTS_QUERY = gql`
+const EXPLORE_PROFILES_QUERY = gql`
   query {
     profiles(first: 20, orderBy: pubCount, orderDirection: desc) {
-   profiles(first: 10, orderBy: pubCount) {
- features/thegraph
       id
       pubCount
       owner
@@ -31,12 +28,9 @@ const client = new ApolloClient({
 const Dashboard: FC<Props> = ({ feedType = 'TOP_USERS' }) => {
   const [data, setData] = useState<any>(null)
 
-  const [query, setQuery] = useState<string>('EXPLORE_PROFILES_QUERY')
-
   useEffect(() => {
     const fetchData = async () => {
       const data = await client.query({
-
         query: EXPLORE_PROFILES_QUERY
       })
       setData(data.data.profiles)
@@ -59,8 +53,8 @@ const Dashboard: FC<Props> = ({ feedType = 'TOP_USERS' }) => {
                 <a href={`/u/${profile?.handle}`}>
                   <div className="flex items-center space-x-3">
                     <img
-                      height={100}
-                      width={100}
+                      height={150}
+                      width={150}
                       src={profile?.imageURI}
                       // className={clsx(
                       //   isBig ? 'w-14 h-14' : 'w-10 h-10',
