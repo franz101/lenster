@@ -4,6 +4,10 @@
     <strong>Making the web3 social media more decentralized with EPNS and The Grpah</strong>
     <strong>Decentralized, and permissionless social media app 🌿</strong>
 </div>
+<b>What was innovated through Hacking?</b>
+- Adding our own social modular
+- Decentralized notifications using EPNS
+- Extending an existing subgraph (the graph) and displaying power users :)
 <br>
 <div align="center">
     <a href="https://vercel.com/lenster?utm_source=Lenster&utm_campaign=oss">
